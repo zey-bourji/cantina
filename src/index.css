@@ -3323,3 +3323,39 @@ button:active:not(:disabled) { transform: scale(0.97); }
   }
 }
 
+
+/* Composer — téléphone : le bol reste visible en haut, les ingrédients défilent de gauche à droite */
+@media (max-width: 759px) {
+  .composer-page .cmp-header { margin-bottom: 10px; }
+  .composer-page .cmp-subtitle { display: none; }
+  .composer-page .cmp-stage-col { position: sticky; top: 58px; z-index: 20; }
+  .composer-page .cmp-stage-card {
+    padding: 10px 12px 12px;
+    border-radius: 22px;
+    box-shadow: 0 10px 24px rgba(29, 29, 27, 0.10);
+  }
+  .composer-page .cmp-stage-actions { margin-bottom: 4px; }
+  .composer-page .bowl-frame { width: min(190px, 50vw); }
+  .composer-page .cmp-metrics { margin-top: 8px; padding-top: 8px; gap: 6px; }
+  .composer-page .cmp-price-val { font-size: 1.4rem; }
+  .composer-page .cmp-grams-line { font-size: 0.72rem; }
+  .composer-page .cmp-selected-strip {
+    flex-wrap: nowrap; overflow-x: auto; max-height: none;
+    mask-image: none; scrollbar-width: none;
+  }
+  .composer-page .cmp-selected-strip .cmp-chip { flex: none; }
+  .composer-page .btn-coral.cmp-cta { min-height: 46px; }
+  .composer-page .cmp-section { margin-bottom: 14px; gap: 8px; }
+  .composer-page .plates {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 8px 16px 6px;
+  }
+  .composer-page .plates::-webkit-scrollbar { display: none; }
+  .composer-page .plate-wrap { flex: 0 0 116px; scroll-snap-align: start; }
+}

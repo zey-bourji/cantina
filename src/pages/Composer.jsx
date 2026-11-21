@@ -723,8 +723,8 @@ export default function Composer() {
                           key={pieceKey}
                           className="in-bowl"
                           style={{
-                            left: `${p.x + offset.dx}%`,
-                            top: `${p.y + offset.dy}%`,
+                            left: `${p.x + offset.dx - pieceSize / 2}%`,
+                            top: `${p.y + offset.dy - pieceSize / 2}%`,
                             width: `${pieceSize}%`,
                             height: `${pieceSize}%`,
                             zIndex: p.z + copyIdx,

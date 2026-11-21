@@ -128,8 +128,9 @@ export default function Login() {
     else navigate('/')
   }
 
-  const digits = code.slice(0, 6).split('')
-  const activeIdx = Math.min(digits.length, 5)
+  const boxCount = code.length > 6 ? 8 : 6
+  const digits = code.slice(0, boxCount).split('')
+  const activeIdx = Math.min(digits.length, boxCount - 1)
   const codeReady = digits.length >= 6 && !error
 
   return (
@@ -191,7 +192,7 @@ export default function Login() {
                 pattern="[0-9]*"
                 autoComplete="one-time-code"
                 placeholder="······"
-                maxLength={6}
+                maxLength={8}
                 value={code}
                 onChange={(e) => {
                   if (error) setError('')
@@ -200,10 +201,10 @@ export default function Login() {
                 autoFocus
                 required
               />
-              <div className="auth-otp-boxes" aria-hidden="true">
-                {[0, 1, 2, 3, 4, 5].map((idx) => {
+              <div className="auth-otp-boxes" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${boxCount}, minmax(0, 1fr))` }}>
+                {Array.from({ length: boxCount }, (_, i) => i).map((idx) => {
                   const char = digits[idx] || ''
-                  const isActive = idx === activeIdx && digits.length < 6
+                  const isActive = idx === activeIdx && digits.length < boxCount
                   return (
                     <span
                       key={idx}

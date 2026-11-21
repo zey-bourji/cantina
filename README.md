@@ -1,27 +1,32 @@
 # Cantina
 
 Application de la cantine de Vatel Abidjan, réalisée pour le Hackathon Restauration Vatel (21 novembre 2026).
-Les élèves consultent le menu de la semaine, réservent ou composent leur repas, paient et récupèrent leur commande. L'équipe de la cantine gère tout depuis un tableau de bord.
+Les élèves consultent le menu, réservent ou composent leur repas, paient et récupèrent leur commande. L'équipe de la cantine gère tout depuis un tableau de bord.
 
 ## Démo
 
-- Application : _lien Cloudflare Pages à ajouter_
+- Application : https://cantina.bourjizeinab17.workers.dev/
 - Comptes de test : _à ajouter (client, caisse, cuisine, admin)_
+
+La connexion se fait par code reçu par email. L'équipe peut aussi se connecter avec un mot de passe (« Connexion équipe »).
 
 ## Ce qui est fait
 
 **Client**
-- Inscription, connexion
-- Menu de la semaine, jour par jour, avec les quantités restantes
-- Commande ou réservation d'un plat
-- Composer son bol (prix en direct, grammes par portion) et composer son plateau (entrée, plat, dessert, boisson, sauce)
+- Accueil public : plats du jour, panier sans compte, inscription demandée seulement à la validation de la commande
+- Inscription et connexion par code email
+- Menu par jour, avec les quantités restantes
+- Petit-déjeuner, déjeuner, dîner : chaque service a son heure limite, et après l'heure on peut réserver pour demain
+- Fiche de chaque plat : description, allergènes, alerte selon les allergies déclarées par le client
+- Composer son bol (prix en direct, grammes par portion) et composer son plateau
 - Solde, recharge, historique des commandes
 - Paiement : solde, Wave, Orange Money, carte (Mobile Money et carte simulés pour la démo)
-- Ticket de commande animé, bouton « J'arrive dans 5 min »
+- Ticket de commande, bouton « J'arrive dans 5 min »
 - Remises de fin de journée, fidélité (-10 % à partir de la 6e commande du mois)
+- Installable sur téléphone (PWA) avec un cache hors ligne
 
 **Équipe**
-- Admin : menus, plats, stock, utilisateurs et rôles, droits donnés à la caisse ou à la cuisine, statistiques par jour, semaine, mois et année, « super vente du mois »
+- Admin : tableau de bord (ventes, comparaison avec la période précédente, export CSV), menus, ajout et suppression de plats avec photos, portions à préparer pour demain, utilisateurs et rôles, droits donnés à la caisse ou à la cuisine
 - Caisse : commandes du jour, quantités de chaque plat par jour, remise au client, annulation avec remboursement
 - Cuisine : commandes à préparer, récapitulatif
 - Courses : liste de courses à partir des seuils de stock, budget du coursier, réception des achats
@@ -30,13 +35,13 @@ Les élèves consultent le menu de la semaine, réservent ou composent leur repa
 
 ## À venir
 
-Notifications push, mode hors ligne, application mobile native, plusieurs langues, vrai paiement Mobile Money.
+Notifications push, plusieurs langues, notes et avis sur les plats, suggestions par IA, vrai paiement Mobile Money.
 
 ## Technique
 
 - React 19 + Vite, React Router
-- Supabase : base Postgres, authentification, règles d'accès (RLS), fonctions SQL pour les commandes, les paiements et le stock
-- Déploiement : Cloudflare Pages
+- Supabase : base Postgres, authentification par code email, règles d'accès (RLS), fonctions SQL pour les commandes, les paiements et le stock
+- Déploiement : Cloudflare Workers (build automatique à chaque push sur `main`)
 
 ## Lancer en local
 

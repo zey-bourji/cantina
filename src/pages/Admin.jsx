@@ -430,6 +430,18 @@ export function Menus() {
     setEditing(null)
     loadDishes()
   }
+  async function deleteDish(d) {
+    if (!window.confirm(`Supprimer « ${d.name} » ? Il disparaît du menu et du site.`)) return
+    await supabase.from('menu_days').delete().eq('dish_id', d.id)
+    const { error } = await supabase.from('dishes').delete().eq('id', d.id)
+    if (error) {
+      // déjà commandé : on le masque pour garder l'historique des commandes
+      await supabase.from('dishes').update({ available: false }).eq('id', d.id)
+      window.alert('Ce plat a déjà été commandé : il est retiré du menu et masqué, mais gardé dans l\'historique.')
+    }
+    loadDishes()
+    loadMenu()
+  }
   async function createDish(e) {
     e.preventDefault()
     await supabase.from('dishes').insert({
@@ -437,8 +449,9 @@ export function Menus() {
       category: form.category || 'autre',
       price: Number(form.price),
       ready_to_go: form.ready_to_go,
+      service: form.service || 'toute_la_journee',
     })
-    setForm({ name: '', category: '', price: '', ready_to_go: false })
+    setForm({ name: '', category: '', price: '', ready_to_go: false, service: 'toute_la_journee' })
     loadDishes()
   }
 
@@ -507,6 +520,7 @@ export function Menus() {
                   <button className="btn-light" onClick={() => setEditing({ ...d })}>Modifier</button>
                   <button className="btn-light" onClick={() => setSale(d, d.discount_pct > 0 ? 0 : 30)}>{d.discount_pct > 0 ? 'Fin du solde' : 'Solder -30 %'}</button>
                   <button className="btn-light" onClick={() => toggleAvailable(d)}>{d.available ? 'Épuisé' : 'Remettre'}</button>
+                  <button className="btn-light" style={{ color: '#b3361d' }} onClick={() => deleteDish(d)}>Supprimer</button>
                 </div>
               </>
             )}
@@ -519,6 +533,9 @@ export function Menus() {
         <input placeholder="Nom" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         <input placeholder="Catégorie" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
         <input type="number" min="0" placeholder="Prix FCFA" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
+        <select value={form.service || 'toute_la_journee'} onChange={(e) => setForm({ ...form, service: e.target.value })}>
+          {SERVICES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+        </select>
         <label><input type="checkbox" checked={form.ready_to_go} onChange={(e) => setForm({ ...form, ready_to_go: e.target.checked })} /> Prêt à emporter</label>
         <button type="submit">Ajouter</button>
       </form>
