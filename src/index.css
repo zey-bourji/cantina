@@ -3390,3 +3390,31 @@ button:active:not(:disabled) { transform: scale(0.97); }
   outline: none;
 }
 .auth-card .auth-select:focus { background: #ffffff; border-color: #D63A24; box-shadow: 0 0 0 3px var(--yellow, #FBE3A1); }
+
+/* Composer — téléphone : version aérée, l'essentiel seulement */
+@media (max-width: 759px) {
+  .composer-page .cmp-grams-line,
+  .composer-page .cmp-selected-strip,
+  .composer-page .cmp-balance-badge { display: none; }
+  .composer-page .cmp-stage-actions { justify-content: flex-end; min-height: 0; }
+  .composer-page .cmp-header h1 { font-size: 1.5rem; }
+  .composer-page .cmp-topbar-row { margin-bottom: 8px; }
+  .composer-page .cmp-budget-card { padding: 10px 12px; }
+  .composer-page .plate-price { font-size: 0.7rem; }
+}
+
+/* Menu — cartes de plats plus aérées */
+.dish-row .dish-info { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.dish-row .dish-info > * { margin: 0; }
+.dish-row .pill { padding: 4px 10px; font-size: 0.78rem; border-radius: 999px; width: auto; }
+.dish-row .allergy-pill { background: #fbe6df; color: #b3361d; }
+.dish-row .pill.sale { background: transparent; color: #b3361d; padding: 0; font-weight: 700; }
+.closed-line { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.closed-line small { font-size: 0.82rem; color: rgba(29, 29, 27, 0.55); font-weight: 600; }
+.closed-line .reserve-btn {
+  border: 0; background: var(--yellow, #FBE3A1); color: #1D1D1B;
+  font: inherit; font-size: 0.82rem; font-weight: 700;
+  padding: 7px 14px; border-radius: 999px; cursor: pointer;
+}
+.closed-line .reserve-btn:active { transform: scale(0.97); }
+.dish-row .dish-price { margin-top: 4px; }

@@ -191,7 +191,7 @@ export default function Caisse() {
                 <strong style={{ fontSize: '1.3rem' }}>#{o.number}</strong>
                 <span className="pill pill-mint">{STATUS[o.status]}</span>
               </div>
-              <div className="muted">{o.profiles?.full_name || 'Client'}</div>
+              <div className="muted">{o.profiles?.full_name || 'Client'}{o.profiles?.phone && <> · <a href={`tel:${o.profiles.phone}`}>{o.profiles.phone}</a></>}</div>
               {o.arriving && <div className="arrive-tag">Arrive dans 5 min</div>}
               <ul>
                 {(o.order_items || []).map((i, k) => (

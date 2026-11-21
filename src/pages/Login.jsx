@@ -70,6 +70,7 @@ export default function Login() {
   const [fullName, setFullName] = useState('')
   const [age, setAge] = useState('')
   const [parentEmail, setParentEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
@@ -99,7 +100,7 @@ export default function Login() {
         shouldCreateUser: mode === 'signup',
         data:
           mode === 'signup'
-            ? { full_name: fullName.trim(), age: Number(age), parent_email: parentEmail.trim() || null }
+            ? { full_name: fullName.trim(), phone: phone.trim(), age: Number(age), parent_email: parentEmail.trim() || null }
             : undefined,
       },
     })
@@ -170,6 +171,18 @@ export default function Login() {
                 autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            )}
+            {mode === 'signup' && (
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="Ton numéro de téléphone"
+                enterKeyHint="next"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 required
               />
             )}

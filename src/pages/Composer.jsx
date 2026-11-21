@@ -99,7 +99,7 @@ function plateLayout(foods) {
     const n = bases.length
     let spot
     if (n === 1) {
-      spot = { x: 48, y: 52, size: 54, rot: -4 }
+      spot = { x: 40, y: 52, size: 50, rot: -4 }
     } else if (n === 2) {
       spot = idx === 0 ? { x: 38, y: 51, size: 45, rot: -8 } : { x: 60, y: 52, size: 45, rot: 7 }
     } else {
@@ -115,9 +115,9 @@ function plateLayout(foods) {
     const n = prots.length
     let spot
     if (n === 1) {
-      spot = { x: 53, y: 45, size: 44, rot: 6 }
+      spot = { x: 68, y: 50, size: 38, rot: 8 }
     } else if (n === 2) {
-      spot = idx === 0 ? { x: 41, y: 43, size: 39, rot: -9 } : { x: 61, y: 47, size: 39, rot: 8 }
+      spot = idx === 0 ? { x: 68, y: 38, size: 34, rot: -9 } : { x: 66, y: 64, size: 34, rot: 8 }
     } else {
       const angle = (-135 + (270 / Math.max(1, n - 1)) * idx) * (Math.PI / 180)
       spot = { x: 50 + 16 * Math.cos(angle), y: 46 + 13 * Math.sin(angle), size: 35, rot: idx * 12 - 12 }
@@ -131,7 +131,7 @@ function plateLayout(foods) {
     const n = sides.length
     let spot
     if (n === 1) {
-      spot = { x: 35, y: 61, size: 37, rot: -12 }
+      spot = { x: 44, y: 72, size: 32, rot: -12 }
     } else if (n === 2) {
       spot = idx === 0 ? { x: 34, y: 60, size: 34, rot: -14 } : { x: 65, y: 61, size: 34, rot: 11 }
     } else {
@@ -147,7 +147,7 @@ function plateLayout(foods) {
     const n = vegs.length
     let spot
     if (n === 1) {
-      spot = { x: 64, y: 37, size: 30, rot: 13 }
+      spot = { x: 46, y: 30, size: 26, rot: 13 }
     } else if (n === 2) {
       spot = idx === 0 ? { x: 64, y: 36, size: 28, rot: 12 } : { x: 36, y: 38, size: 28, rot: -15 }
     } else if (n === 3) {
@@ -189,8 +189,7 @@ const SPRINKLES = [
   { match: 'poivre', only: true, colors: ['#2B2622', '#4A413A', '#1A1613'], shape: 'dot', size: 0.9, count: 18, tool: 'shaker' },
   { match: 'maggi', only: true, colors: ['#D9A441', '#B9792A', '#EBC26B', '#8F5A1B'], shape: 'chunk', size: 1.5, count: 14, tool: 'cube' },
   { match: 'piment', only: true, colors: ['#D62A1B', '#A81C10', '#F0541E'], shape: 'flake', size: 1.5, count: 14, tool: null },
-  { match: 'tomate', only: false, colors: ['#E0342A', '#C7261C', '#F25B4B'], shape: 'dice', size: 2, count: 8, tool: null },
-  { match: 'oignon', only: false, colors: ['#F4E7F0', '#E7C9DD', '#FFF8F2'], shape: 'flake', size: 1.7, count: 9, tool: null },
+  { match: 'oignon', only: true, colors: ['#F4E7F0', '#E7C9DD', '#FFF8F2'], shape: 'flake', size: 1.7, count: 9, tool: null },
   { match: 'ail', only: false, colors: ['#FFF4D6', '#F2E2B0'], shape: 'dot', size: 1.1, count: 7, tool: null },
 ]
 const sprinkleOf = (ing) => {

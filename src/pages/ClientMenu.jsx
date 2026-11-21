@@ -177,9 +177,9 @@ export default function ClientMenu() {
                 <small>{dish.ready_to_go ? 'Prêt à emporter' : 'Préparé sur place'}</small>
                 {clash(dish).length > 0 && <span className="pill allergy-pill">⚠ Contient : {clash(dish).map((k) => ALLERGENS.find((a) => a[0] === k)?.[1]).join(', ')}</span>}
                 {isClosed(dish, day) && (
-                  <span className="pill closed-pill">
-                    Commandes closes depuis {closesLabel(dish)}
-                    {nextDay && <button className="link-btn" onClick={(e) => { e.stopPropagation(); selectDay(nextDay) }}> Réserver pour demain</button>}
+                  <span className="closed-line">
+                    <small>Fermé depuis {closesLabel(dish)}</small>
+                    {nextDay && <button className="reserve-btn" onClick={(e) => { e.stopPropagation(); selectDay(nextDay) }}>Réserver pour demain</button>}
                   </span>
                 )}
                 {dish.left === 0 && <span className="pill sale" style={{ background: '#eee', color: '#555' }}>Épuisé</span>}

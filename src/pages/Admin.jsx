@@ -678,7 +678,7 @@ function Users() {
   const [q, setQ] = useState('')
   const [msg, setMsg] = useState(null)
   const load = useCallback(async () => {
-    const { data } = await supabase.from('profiles').select('id, full_name, role, balance, permissions').order('full_name')
+    const { data } = await supabase.from('profiles').select('id, full_name, phone, role, balance, permissions').order('full_name')
     setUsers(data || [])
   }, [])
   useEffect(() => { load() }, [load])
@@ -716,7 +716,7 @@ function Users() {
         <div key={u.id} className="order-row" style={{ flexWrap: 'wrap' }}>
           <div>
             <strong>{u.full_name || 'Sans nom'}</strong>
-            <div className="muted" style={{ fontSize: '0.85rem' }}>Solde : {fcfa(u.balance)}</div>
+            <div className="muted" style={{ fontSize: '0.85rem' }}>Solde : {fcfa(u.balance)}{u.phone && <> · <a href={`tel:${u.phone}`}>{u.phone}</a></>}</div>
             {['caisse', 'cuisine', 'approvisionnement'].includes(u.role) && (
               <div className="perms">
                 <label><input type="checkbox" checked={(u.permissions || []).includes('menus')} onChange={() => togglePerm(u, 'menus')} /> Peut modifier les menus et plats</label>
