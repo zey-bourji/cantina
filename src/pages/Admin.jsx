@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { DayQuantities, ProposeDish } from './Caisse'
+import { SERVICES } from '../lib/services'
 import { useOrders, today, dateStr, tally, fcfa, STATUS } from '../hooks/useOrders'
 
 const short = (d) =>
@@ -424,7 +425,7 @@ export function Menus() {
   async function saveEdit() {
     await supabase
       .from('dishes')
-      .update({ name: editing.name, category: editing.category, price: Number(editing.price), ready_to_go: editing.ready_to_go })
+      .update({ name: editing.name, category: editing.category, price: Number(editing.price), ready_to_go: editing.ready_to_go, service: editing.service || 'toute_la_journee' })
       .eq('id', editing.id)
     setEditing(null)
     loadDishes()
@@ -484,6 +485,9 @@ export function Menus() {
                 <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
                 <input value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })} style={{ width: 130 }} />
                 <input type="number" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} style={{ width: 100 }} />
+                <select value={editing.service || 'toute_la_journee'} onChange={(e) => setEditing({ ...editing, service: e.target.value })}>
+                  {SERVICES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                </select>
                 <label><input type="checkbox" checked={editing.ready_to_go} onChange={(e) => setEditing({ ...editing, ready_to_go: e.target.checked })} /> prêt</label>
                 <button onClick={saveEdit}>Enregistrer</button>
                 <button className="btn-light" onClick={() => setEditing(null)}>Annuler</button>
@@ -496,7 +500,7 @@ export function Menus() {
                   <span>
                     <strong>{d.name}</strong>
                     <br />
-                    <small className="muted">{d.category} · {fcfa(d.price)} · {d.ready_to_go ? 'prêt' : 'sur place'}{d.available ? '' : ' · épuisé'}{d.discount_pct > 0 ? ` · soldé -${d.discount_pct} %` : ''}</small>
+                    <small className="muted">{d.category} · {SERVICES.find((s) => s.key === d.service)?.label || 'Toute la journée'} · {fcfa(d.price)} · {d.ready_to_go ? 'prêt' : 'sur place'}{d.available ? '' : ' · épuisé'}{d.discount_pct > 0 ? ` · soldé -${d.discount_pct} %` : ''}</small>
                   </span>
                 </label>
                 <div style={{ display: 'flex', gap: 6 }}>
