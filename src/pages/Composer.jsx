@@ -39,6 +39,8 @@ const GRAMS = {
   frites: 100,
   'mais-grille': 150,
   alloco: 100,
+  igname: 130,
+  foutou: 180,
   avocat: 80,
   tomate: 60,
   oignon: 30,
@@ -48,38 +50,36 @@ const GRAMS = {
 }
 const gramsOf = (ing) => GRAMS[slug(ing.name)] || GRAMS_BY_CAT[ing.category] || 100
 
-// Compteur animé fluide pour le prix en FCFA et le grammage
-function useAnimatedNumber(target, duration = 360) {
-  const [value, setValue] = useState(target)
-  const currentRef = useRef(target)
+// Compteur mécanique type odomètre : chaque chiffre roule verticalement comme sur un Reel UI
+const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+function RollingNumber({ value }) {
+  const formatted = Math.round(Number(value || 0)).toLocaleString('fr-FR')
+  const chars = formatted.split('')
 
-  useEffect(() => {
-    const start = currentRef.current
-    const diff = target - start
-    if (diff === 0) return
-
-    let frameId
-    const startTime = performance.now()
-
-    const tick = (now) => {
-      const elapsed = Math.min(1, (now - startTime) / duration)
-      const eased = 1 - Math.pow(1 - elapsed, 3)
-      const next = start + diff * eased
-      currentRef.current = next
-      setValue(next)
-      if (elapsed < 1) {
-        frameId = requestAnimationFrame(tick)
-      } else {
-        currentRef.current = target
-        setValue(target)
-      }
-    }
-
-    frameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frameId)
-  }, [target, duration])
-
-  return Math.round(value)
+  return (
+    <span className="odo" aria-label={formatted}>
+      {chars.map((ch, idx) => {
+        const posFromRight = chars.length - 1 - idx
+        if (ch >= '0' && ch <= '9') {
+          const digit = Number(ch)
+          return (
+            <span key={`d-${posFromRight}`} className="odo-digit-box">
+              <span className="odo-strip" style={{ transform: `translateY(-${digit * 1.15}em)` }}>
+                {DIGITS.map((d) => (
+                  <span key={d}>{d}</span>
+                ))}
+              </span>
+            </span>
+          )
+        }
+        return (
+          <span key={`s-${posFromRight}`} className="odo-sep">
+            {ch === ' ' || ch === '\u202f' || ch === '\u00a0' ? '\u00a0' : ch}
+          </span>
+        )
+      })}
+    </span>
+  )
 }
 
 // Dressage culinaire réaliste : empilement par couches (base -> protéine -> accompagnement -> légume)
@@ -183,7 +183,95 @@ const SAUCE_PALETTES = {
   andalouse: { fill: '#E87A3E', edge: '#B5531E', shine: '#FFB48A' },
 }
 
-// Filet de sauce en zigzag : la bouteille arrive, glisse en S-curve en versant le filet, puis repart
+// Ingrédients "saupoudrés" : une pluie de petits grains retombe sur l'assiette
+const SPRINKLES = [
+  { match: 'sel', only: true, colors: ['#FFFFFF', '#F1EFEA', '#DAD6CE'], shape: 'cube', size: 1.15, count: 20, tool: 'shaker' },
+  { match: 'poivre', only: true, colors: ['#2B2622', '#4A413A', '#1A1613'], shape: 'dot', size: 0.9, count: 18, tool: 'shaker' },
+  { match: 'maggi', only: true, colors: ['#D9A441', '#B9792A', '#EBC26B', '#8F5A1B'], shape: 'chunk', size: 1.5, count: 14, tool: 'cube' },
+  { match: 'piment', only: true, colors: ['#D62A1B', '#A81C10', '#F0541E'], shape: 'flake', size: 1.5, count: 14, tool: null },
+  { match: 'tomate', only: false, colors: ['#E0342A', '#C7261C', '#F25B4B'], shape: 'dice', size: 2, count: 8, tool: null },
+  { match: 'oignon', only: false, colors: ['#F4E7F0', '#E7C9DD', '#FFF8F2'], shape: 'flake', size: 1.7, count: 9, tool: null },
+  { match: 'ail', only: false, colors: ['#FFF4D6', '#F2E2B0'], shape: 'dot', size: 1.1, count: 7, tool: null },
+]
+const sprinkleOf = (ing) => {
+  const sl = slug(ing.name)
+  return SPRINKLES.find((sp) => (sp.match === 'ail' ? sl === 'ail' : sl.includes(sp.match)))
+}
+const rnd = (n) => {
+  const x = Math.sin(n * 12.9898 + 4.1414) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function Sprinkle({ spec, q, k }) {
+  const t0 = 0.1 + k * 0.45
+  const count = spec.count + (q - 1) * 5
+  const grains = Array.from({ length: count }, (_, i) => {
+    const r1 = rnd(i + 1 + k * 31)
+    const r2 = rnd(i + 57 + k * 17)
+    const r3 = rnd(i + 91 + k * 7)
+    const r4 = rnd(i + 13 + k * 5)
+    return {
+      x: 26 + r1 * 48,
+      y: 32 + r2 * 38,
+      rot: r3 * 180,
+      color: spec.colors[Math.floor(r4 * spec.colors.length)],
+      begin: t0 + 0.12 + i * (0.9 / count),
+      dx: (r4 - 0.5) * 8,
+      s: spec.size * (0.75 + r3 * 0.6),
+    }
+  })
+
+  const grain = (g) => {
+    if (spec.shape === 'dot') return <circle r={g.s * 0.6} fill={g.color} />
+    if (spec.shape === 'flake') return <ellipse rx={g.s * 0.85} ry={g.s * 0.4} fill={g.color} />
+    if (spec.shape === 'chunk') return <polygon points={`${-g.s},${-g.s * 0.5} ${g.s * 0.2},${-g.s * 0.8} ${g.s},${g.s * 0.3} ${-g.s * 0.4},${g.s * 0.8}`} fill={g.color} />
+    if (spec.shape === 'dice') return <rect x={-g.s / 2} y={-g.s / 2} width={g.s} height={g.s} rx="0.4" fill={g.color} stroke="rgba(0,0,0,0.12)" strokeWidth="0.15" />
+    return <rect x={-g.s / 2} y={-g.s / 2} width={g.s} height={g.s} fill={g.color} stroke="rgba(0,0,0,0.18)" strokeWidth="0.15" />
+  }
+
+  const toolDur = 1.3
+  return (
+    <g>
+      {/* Outil : salière / cube qu'on écrase au-dessus de l'assiette */}
+      {spec.tool && (
+        <g opacity="0">
+          <g transform="translate(50 14)">
+            <g>
+              {spec.tool === 'shaker' ? (
+                <g>
+                  <rect x="-5" y="-4" width="10" height="11" rx="2.5" fill="#F6F8FA" stroke="#B9C0C7" strokeWidth="0.6" />
+                  <rect x="-5.3" y="-8" width="10.6" height="5" rx="2" fill="#C8CED4" stroke="#8F979F" strokeWidth="0.6" />
+                  <circle cx="-2" cy="-5.5" r="0.5" fill="#6B737B" />
+                  <circle cx="0" cy="-5.5" r="0.5" fill="#6B737B" />
+                  <circle cx="2" cy="-5.5" r="0.5" fill="#6B737B" />
+                </g>
+              ) : (
+                <g>
+                  <rect x="-5" y="-5" width="10" height="10" rx="1.6" fill="#F3C233" stroke="#B88A10" strokeWidth="0.6" />
+                  <rect x="-3.6" y="-2.4" width="7.2" height="4.8" rx="0.8" fill="#D8281C" />
+                  <text x="0" y="1.1" fontSize="3" fontWeight="800" textAnchor="middle" fill="#FFF">MAGGI</text>
+                </g>
+              )}
+              <animateTransform attributeName="transform" type="rotate" values="0;-24;18;-24;18;-12;0" dur={`${toolDur}s`} begin={`${t0}s`} fill="freeze" />
+            </g>
+          </g>
+          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.85;1" dur={`${toolDur + 0.2}s`} begin={`${t0}s`} fill="freeze" />
+        </g>
+      )}
+      {grains.map((g, i) => (
+        <g key={i} transform={`translate(${g.x} ${g.y}) rotate(${g.rot})`} opacity="0">
+          <g>
+            {grain(g)}
+            <animateTransform attributeName="transform" type="translate" from={`${g.dx} -38`} to="0 0" dur="0.5s" begin={`${g.begin}s`} fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.5 0 0.9 0.6" />
+          </g>
+          <set attributeName="opacity" to="1" begin={`${g.begin}s`} fill="freeze" />
+        </g>
+      ))}
+    </g>
+  )
+}
+
+// Filet de sauce en zigzag : la bouteille arrive, se presse en S-curve en versant le filet, puis repart
 function Drizzle({ name, q, k }) {
   const sl = slug(name)
   const [imgFailed, setImgFailed] = useState(false)
@@ -253,7 +341,7 @@ function Drizzle({ name, q, k }) {
         transform="translate(-0.2, -0.4)"
       />
 
-      {/* Bouteille inclinée dont la buse suit la pointe du filet */}
+      {/* Bouteille inclinée dont la buse suit la pointe du filet avec pulsation de pression */}
       <g opacity="0">
         {!imgFailed ? (
           <image
@@ -266,7 +354,7 @@ function Drizzle({ name, q, k }) {
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <g transform="rotate(-142)">
+          <g className="bottle-squeeze">
             <path d="M 0 0 L -2.2 -5.5 L 2.2 -5.5 Z" fill={palette.fill} stroke={palette.edge} strokeWidth="0.6" />
             <rect x="-4.5" y="-8.5" width="9" height="3.2" rx="1.2" fill="#FFFFFF" stroke="#D6D3CB" strokeWidth="0.6" />
             <rect x="-6.5" y="-27" width="13" height="19" rx="4.2" fill={palette.fill} stroke={palette.edge} strokeWidth="0.8" />
@@ -362,7 +450,15 @@ export default function Composer() {
   const [ticket, setTicket] = useState(null)
   const [busy, setBusy] = useState(false)
   const [checkout, setCheckout] = useState(false)
+
+  // États purement visuels pour la chorégraphie d'animation
   const [activeCat, setActiveCat] = useState('all')
+  const [flyers, setFlyers] = useState([])
+  const [bowlImpact, setBowlImpact] = useState(0)
+  const [bumping, setBumping] = useState(false)
+  const [celebrating, setCelebrating] = useState(false)
+  const bowlRef = useRef(null)
+  const prevBalancedRef = useRef(false)
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('ingredients').select('*').order('name')
@@ -380,8 +476,9 @@ export default function Composer() {
   const sorted = [...chosen].sort(
     (a, b) => ORDER.indexOf(a.ing.category) - ORDER.indexOf(b.ing.category) || a.ing.name.localeCompare(b.ing.name)
   )
-  const foods = sorted.filter((s) => s.ing.category !== 'sauce')
-  const sauces = sorted.filter((s) => s.ing.category === 'sauce')
+  const sprinkled = sorted.filter((s) => sprinkleOf(s.ing))
+  const foods = sorted.filter((s) => s.ing.category !== 'sauce' && !sprinkleOf(s.ing)?.only)
+  const sauces = sorted.filter((s) => s.ing.category === 'sauce' && !sprinkleOf(s.ing)?.only)
   const platedFoods = plateLayout(foods)
 
   const grams = chosen.reduce((s, c) => s + gramsOf(c.ing) * c.q, 0)
@@ -395,14 +492,60 @@ export default function Composer() {
         ? 'Ajoute un légume (≈ 80 g)'
         : 'Assiette équilibrée'
 
+  useEffect(() => {
+    if (bowlImpact === 0) return
+    setBumping(true)
+    const t = setTimeout(() => setBumping(false), 400)
+    return () => clearTimeout(t)
+  }, [bowlImpact])
+
+  useEffect(() => {
+    if (isBalanced && !prevBalancedRef.current) {
+      setCelebrating(true)
+      const timer = setTimeout(() => setCelebrating(false), 750)
+      prevBalancedRef.current = true
+      return () => clearTimeout(timer)
+    }
+    prevBalancedRef.current = isBalanced
+  }, [isBalanced])
+
   const total = chosen.reduce((s, c) => s + c.ing.unit_price * c.q, 0)
   const pct = budget ? Math.min(100, Math.round((total / budget) * 100)) : 0
   const remaining = budget ? Math.max(0, budget - total) : null
 
-  const animatedTotal = useAnimatedNumber(total, 360)
-  const animatedGrams = useAnimatedNumber(grams, 340)
+  // Déclenche le vol parabolique de la carte vers l'assiette + l'impact à l'atterrissage
+  function launchFlight(ing, e) {
+    const bowlEl = bowlRef.current
+    const discEl = e?.currentTarget?.querySelector?.('.plate-disc')
+    if (!bowlEl || !discEl) {
+      setBowlImpact((n) => n + 1)
+      return
+    }
 
-  function add(ing) {
+    const from = discEl.getBoundingClientRect()
+    const to = bowlEl.getBoundingClientRect()
+    const id = `${ing.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const size = Math.min(68, from.width * 0.85)
+
+    const flyer = {
+      id,
+      name: ing.name,
+      category: ing.category,
+      size,
+      sx: from.left + from.width / 2 - size / 2,
+      sy: from.top + from.height / 2 - size / 2,
+      ex: to.left + to.width / 2 - size / 2,
+      ey: to.top + to.height / 2 - size / 2,
+    }
+
+    setFlyers((prev) => [...prev, flyer])
+    setTimeout(() => setBowlImpact((n) => n + 1), 390)
+    setTimeout(() => {
+      setFlyers((prev) => prev.filter((item) => item.id !== id))
+    }, 580)
+  }
+
+  function add(ing, e) {
     setMessage(null)
     if (!ing.available || ing.stock_qty <= 0) return
     const current = qty[ing.id] || 0
@@ -414,6 +557,7 @@ export default function Composer() {
       setMessage({ type: 'error', text: `Budget de ${fcfa(budget)} atteint !` })
       return
     }
+    launchFlight(ing, e)
     setQty({ ...qty, [ing.id]: current + 1 })
   }
 
@@ -462,9 +606,37 @@ export default function Composer() {
   }
 
   return (
-    <div className="cmp-page">
+    <div>
       <Header />
       {ticket && <Ticket ticket={ticket} onClose={() => setTicket(null)} />}
+
+      {/* Calque des ingrédients en vol parabolique vers l'assiette */}
+      {flyers.length > 0 && (
+        <div className="fly-layer" aria-hidden="true">
+          {flyers.map((f) => (
+            <div
+              key={f.id}
+              className="fly-x"
+              style={{
+                width: f.size,
+                height: f.size,
+                '--sx': `${f.sx}px`,
+                '--ex': `${f.ex}px`,
+              }}
+            >
+              <div
+                className="fly-y"
+                style={{
+                  '--sy': `${f.sy}px`,
+                  '--ey': `${f.ey}px`,
+                }}
+              >
+                <FoodImg folder="ingredients" name={f.name} category={f.category} size="fill" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <main className="container">
         <div className="cmp-topbar-row">
@@ -484,11 +656,13 @@ export default function Composer() {
         </div>
 
         <div className="cmp-layout">
-          {/* Colonne gauche (fixe sur tablette/desktop) : Assiette + Compteurs animés */}
+          {/* Colonne gauche (fixe sur tablette/desktop) : Assiette + Compteurs odomètre */}
           <div className="cmp-stage-col">
             <div className="cmp-stage-card">
               <div className="cmp-stage-actions">
-                <span className={`cmp-balance-badge ${isBalanced ? 'is-balanced' : ''}`}>
+                <span
+                  className={`cmp-balance-badge ${isBalanced ? 'is-balanced' : ''} ${celebrating ? 'is-celebrating' : ''}`}
+                >
                   {isBalanced && <IconCheck />}
                   <span>{tip}</span>
                 </span>
@@ -507,79 +681,99 @@ export default function Composer() {
                 )}
               </div>
 
-              <div className="bowl">
-                <img
-                  className="bowl-img"
-                  src="/img/bol.png"
-                  alt=""
-                  onError={(e) => (e.currentTarget.style.display = 'none')}
-                />
+              <div className="bowl-frame">
+                <div
+                  ref={bowlRef}
+                  className={`bowl ${bumping ? 'is-impact' : ''}`}
+                >
+                  <img
+                    className="bowl-img"
+                    src="/img/bol.png"
+                    alt=""
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                  />
 
-                {chosen.length === 0 && (
-                  <div className="bowl-empty">
-                    <span className="bowl-empty-icon">
-                      <IconPlate />
-                    </span>
-                    <span>
-                      Ton assiette est vide.
-                      <br />
-                      Choisis un ingrédient ci-dessous.
-                    </span>
-                  </div>
-                )}
+                  {chosen.length === 0 && (
+                    <div className="bowl-empty">
+                      <span className="bowl-empty-icon">
+                        <IconPlate />
+                      </span>
+                      <span>
+                        Ton assiette est vide.
+                        <br />
+                        Choisis un ingrédient ci-dessous.
+                      </span>
+                    </div>
+                  )}
 
-                {platedFoods.map((p) => {
-                  const visualCopies = Math.min(p.item.q, 3)
-                  return Array.from({ length: visualCopies }, (_, copyIdx) => {
-                    const offset = STACK_OFFSETS[copyIdx]
-                    const pieceSize = p.size * offset.scale
-                    const pieceRot = p.rot + offset.dRot
-                    const isTopPiece = copyIdx === visualCopies - 1
-                    const isTopBadge = isTopPiece && p.item.q > 1
-                    const pieceKey = isTopPiece
-                      ? `${p.item.ing.id}-top-${p.item.q}`
-                      : `${p.item.ing.id}-piece-${copyIdx + 1}`
+                  {platedFoods.map((p) => {
+                    const visualCopies = Math.min(p.item.q, 3)
+                    return Array.from({ length: visualCopies }, (_, copyIdx) => {
+                      const offset = STACK_OFFSETS[copyIdx]
+                      const pieceSize = p.size * offset.scale
+                      const pieceRot = p.rot + offset.dRot
+                      const isTopPiece = copyIdx === visualCopies - 1
+                      const isTopBadge = isTopPiece && p.item.q > 1
+                      const pieceKey = isTopPiece
+                        ? `${p.item.ing.id}-top-${p.item.q}`
+                        : `${p.item.ing.id}-piece-${copyIdx + 1}`
 
-                    return (
-                      <div
-                        key={pieceKey}
-                        className="in-bowl"
-                        style={{
-                          left: `${p.x + offset.dx}%`,
-                          top: `${p.y + offset.dy}%`,
-                          width: `${pieceSize}%`,
-                          height: `${pieceSize}%`,
-                          zIndex: p.z + copyIdx,
-                        }}
-                      >
-                        <div className="scoop" style={{ '--rot': `${pieceRot}deg` }}>
-                          <FoodImg folder="ingredients" name={p.item.ing.name} category={p.item.ing.category} size="fill" />
+                      return (
+                        <div
+                          key={pieceKey}
+                          className="in-bowl"
+                          style={{
+                            left: `${p.x + offset.dx}%`,
+                            top: `${p.y + offset.dy}%`,
+                            width: `${pieceSize}%`,
+                            height: `${pieceSize}%`,
+                            zIndex: p.z + copyIdx,
+                          }}
+                        >
+                          <div className="scoop" style={{ '--rot': `${pieceRot}deg` }}>
+                            <FoodImg folder="ingredients" name={p.item.ing.name} category={p.item.ing.category} size="fill" />
+                          </div>
+                          {isTopBadge && <span className="in-bowl-qty">×{p.item.q}</span>}
                         </div>
-                        {isTopBadge && <span className="in-bowl-qty">×{p.item.q}</span>}
-                      </div>
-                    )
-                  })
-                })}
+                      )
+                    })
+                  })}
 
-                {sauces.length > 0 && (
-                  <svg className="drizzle" viewBox="0 0 100 100" aria-hidden="true">
-                    {sauces.map((s, k) => (
-                      <Drizzle key={`${s.ing.id}-${s.q}`} name={s.ing.name} q={s.q} k={k} />
-                    ))}
-                  </svg>
-                )}
+                  {sprinkled.length > 0 && (
+                    <svg className="drizzle" viewBox="0 0 100 100" aria-hidden="true">
+                      {sprinkled.map((s, k) => (
+                        <Sprinkle key={`${s.ing.id}-${s.q}`} spec={sprinkleOf(s.ing)} q={s.q} k={k} />
+                      ))}
+                    </svg>
+                  )}
+
+                  {sauces.length > 0 && (
+                    <svg className="drizzle" viewBox="0 0 100 100" aria-hidden="true">
+                      {sauces.map((s, k) => (
+                        <Drizzle key={`${s.ing.id}-${s.q}`} name={s.ing.name} q={s.q} k={k} />
+                      ))}
+                    </svg>
+                  )}
+                </div>
               </div>
 
               <div className="cmp-metrics">
                 <div className="cmp-price-row">
-                  <span className="cmp-price-val">{fcfa(animatedTotal)}</span>
+                  <span className="cmp-price-val">
+                    <RollingNumber value={total} />
+                    <span className="cmp-price-unit">FCFA</span>
+                  </span>
                   {budget && <span className="cmp-price-cap">/ {fcfa(budget)}</span>}
                 </div>
 
                 <p className="cmp-grams-line">
                   {chosen.length > 0 ? (
                     <>
-                      Poids estimé : <strong>≈ {animatedGrams} g</strong> · idéal 400 à 500 g
+                      Poids estimé :{' '}
+                      <strong>
+                        ≈&nbsp;<RollingNumber value={grams} />&nbsp;g
+                      </strong>{' '}
+                      · idéal 400 à 500 g
                     </>
                   ) : (
                     <>Portion idéale recommandée : 400 à 500 g</>
@@ -613,7 +807,11 @@ export default function Composer() {
                   onClick={() => setCheckout(true)}
                 >
                   <span>Valider et payer</span>
-                  {chosen.length > 0 && <span>· {fcfa(animatedTotal)}</span>}
+                  {chosen.length > 0 && (
+                    <span>
+                      · <RollingNumber value={total} /> F
+                    </span>
+                  )}
                 </button>
 
                 {message && (
@@ -633,7 +831,13 @@ export default function Composer() {
                 <span className="cmp-budget-title">Mon budget</span>
                 {budget ? (
                   <span className={`cmp-budget-rem ${pct >= 100 ? 'full' : ''}`}>
-                    {remaining > 0 ? `Reste ${fcfa(remaining)}` : 'Budget atteint'}
+                    {remaining > 0 ? (
+                      <>
+                        Reste <RollingNumber value={remaining} /> F
+                      </>
+                    ) : (
+                      'Budget atteint'
+                    )}
                   </span>
                 ) : (
                   <span className="muted" style={{ fontSize: '0.8rem' }}>Libre</span>
@@ -685,13 +889,17 @@ export default function Composer() {
                   </div>
 
                   <div className="plates">
-                    {list.map((ing) => {
+                    {list.map((ing, idx) => {
                       const out = !ing.available || ing.stock_qty <= 0
                       const low = !out && ing.stock_qty <= ing.alert_threshold
                       const q = qty[ing.id] || 0
                       return (
-                        <div key={ing.id} className="plate-wrap" style={{ opacity: out ? 0.45 : 1 }}>
-                          <button className={`plate ${q ? 'on' : ''}`} disabled={out} onClick={() => add(ing)}>
+                        <div
+                          key={ing.id}
+                          className="plate-wrap"
+                          style={{ opacity: out ? 0.45 : 1, '--stagger': idx }}
+                        >
+                          <button className={`plate ${q ? 'on' : ''}`} disabled={out} onClick={(e) => add(ing, e)}>
                             <span className="plate-disc">
                               <FoodImg folder="ingredients" name={ing.name} category={ing.category} size={62} />
                             </span>

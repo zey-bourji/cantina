@@ -41,14 +41,14 @@ export default function ClientMenu() {
     const today = new Date().toLocaleDateString('sv-SE')
     const { data } = await supabase
       .from('menu_days')
-      .select('day, qty, dishes(*)')
+      .select('day, qty, featured, dishes(*)')
       .gte('day', today)
       .order('day')
     const grouped = {}
     for (const row of data || []) {
       if (!row.dishes || !row.dishes.available) continue
       if (!grouped[row.day]) grouped[row.day] = []
-      grouped[row.day].push({ ...row.dishes, left: row.qty })
+      grouped[row.day].push({ ...row.dishes, left: row.qty, featured: !!row.featured })
     }
     setMenu(grouped)
     setDay((d) => d || Object.keys(grouped)[0] || null)
@@ -132,9 +132,39 @@ export default function ClientMenu() {
     setBusy(false)
   }
 
-  const dishes = [...((day && menu[day]) || [])].sort((a, b) => Number(!!b.antigaspi) - Number(!!a.antigaspi))
+  const dishes = (day && menu[day]) || []
+  const featured = dishes.filter((d) => d.featured)
+  const rest = dishes.filter((d) => !d.featured)
   const firstName = (profile?.full_name || '').split(' ')[0]
   const count = lines.reduce((s, l) => s + l.qty, 0)
+
+  const renderDish = (dish) => (
+            <div key={dish.id} className="dish-row">
+              <div className="dish-info">
+                <strong>{dish.name}</strong>
+                <small>{dish.ready_to_go ? 'Prêt à emporter' : 'Préparé sur place'}</small>
+                {dish.left === 0 && <span className="pill sale" style={{ background: '#eee', color: '#555' }}>Épuisé</span>}
+                {dish.left > 0 && dish.left <= 5 && <span className="pill sale">Plus que {dish.left}</span>}
+                <span className="dish-price">
+                  {dish.discount_pct > 0 && <s className="muted" style={{ fontWeight: 400, marginRight: 6 }}>{fcfa(dish.price)}</s>}
+                  {fcfa(eff(dish))}
+                  {dish.discount_pct > 0 && <span className="pill sale">-{dish.discount_pct} %</span>}
+                </span>
+              </div>
+              <div className="dish-photo">
+                <FoodImg folder="dishes" name={dish.name} category={dish.category} size={72} />
+                <div className="dish-add">
+                  {cart[dish.id] ? (
+                    <>
+                      <button onClick={() => remove(dish)}>−</button>
+                      <span>{cart[dish.id].qty}</span>
+                    </>
+                  ) : null}
+                  <button onClick={() => add(dish)} disabled={dish.left === 0 || (dish.left != null && (cart[dish.id]?.qty || 0) >= dish.left)}>+</button>
+                </div>
+              </div>
+            </div>
+  )
 
   return (
     <div>
@@ -188,35 +218,21 @@ export default function ClientMenu() {
 
         {message && <p className={message.type === 'error' ? 'error' : 'ok'}>{message.text}</p>}
 
-        <div className="dishes">
-          {dishes.map((dish) => (
-            <div key={dish.id} className="dish-row">
-              <div className="dish-info">
-                <strong>{dish.name}</strong>
-                <small>{dish.antigaspi ? `Panier surprise · retrait dès ${dish.pickup_from || '17:00'}` : dish.ready_to_go ? 'Prêt à emporter' : 'Préparé sur place'}</small>
-                {dish.antigaspi && <span className="pill" style={{ background: '#DFF5E3', color: '#1E6B2F' }}>Anti-gaspi</span>}
-                {dish.left === 0 && <span className="pill sale" style={{ background: '#eee', color: '#555' }}>Épuisé</span>}
-                {dish.left > 0 && dish.left <= 5 && <span className="pill sale">Plus que {dish.left}</span>}
-                <span className="dish-price">
-                  {dish.discount_pct > 0 && <s className="muted" style={{ fontWeight: 400, marginRight: 6 }}>{fcfa(dish.price)}</s>}
-                  {fcfa(eff(dish))}
-                  {dish.discount_pct > 0 && <span className="pill sale">-{dish.discount_pct} %</span>}
-                </span>
-              </div>
-              <div className="dish-photo">
-                <FoodImg folder="dishes" name={dish.name} category={dish.category} size={72} />
-                <div className="dish-add">
-                  {cart[dish.id] ? (
-                    <>
-                      <button onClick={() => remove(dish)}>−</button>
-                      <span>{cart[dish.id].qty}</span>
-                    </>
-                  ) : null}
-                  <button onClick={() => add(dish)} disabled={dish.left === 0 || (dish.left != null && (cart[dish.id]?.qty || 0) >= dish.left)}>+</button>
-                </div>
-              </div>
+        {featured.length > 0 && (
+          <>
+            <div className="section-title">
+              <h2>⭐ Menu du jour</h2>
             </div>
-          ))}
+            <div className="dishes featured-dishes">{featured.map(renderDish)}</div>
+            {rest.length > 0 && (
+              <div className="section-title">
+                <h2>Aussi au menu</h2>
+              </div>
+            )}
+          </>
+        )}
+        <div className="dishes">
+          {rest.map(renderDish)}
         </div>
 
         <div className="section-title" id="commandes">
