@@ -3375,3 +3375,18 @@ button:active:not(:disabled) { transform: scale(0.97); }
 }
 .lp-card { content-visibility: auto; contain-intrinsic-size: auto 250px; }
 .lp-pic img { will-change: auto; }
+
+.auth-card .auth-select {
+  width: 100%;
+  min-height: 50px;
+  padding: 13px 14px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1D1D1B;
+  background: var(--cream, #F7F7F5);
+  border: 1px solid rgba(29, 29, 27, 0.08);
+  border-radius: 12px;
+  outline: none;
+}
+.auth-card .auth-select:focus { background: #ffffff; border-color: #D63A24; box-shadow: 0 0 0 3px var(--yellow, #FBE3A1); }

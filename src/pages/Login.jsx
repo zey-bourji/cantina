@@ -68,6 +68,8 @@ export default function Login() {
   const [step, setStep] = useState('email') // email -> code
   const [usePassword, setUsePassword] = useState(false)
   const [fullName, setFullName] = useState('')
+  const [age, setAge] = useState('')
+  const [parentEmail, setParentEmail] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
@@ -86,12 +88,19 @@ export default function Login() {
     e?.preventDefault()
     setError('')
     setInfo('')
+    if (mode === 'signup' && Number(age) < 18 && !parentEmail.trim()) {
+      setError("Tu as moins de 18 ans : ajoute l'email d'un parent.")
+      return
+    }
     setBusy(true)
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
         shouldCreateUser: mode === 'signup',
-        data: mode === 'signup' ? { full_name: fullName.trim() } : undefined,
+        data:
+          mode === 'signup'
+            ? { full_name: fullName.trim(), age: Number(age), parent_email: parentEmail.trim() || null }
+            : undefined,
       },
     })
     setBusy(false)
@@ -162,6 +171,33 @@ export default function Login() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
+              />
+            )}
+            {mode === 'signup' && (
+              <select
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                required
+                aria-label="Ton âge"
+                className="auth-select"
+              >
+                <option value="" disabled>Ton âge</option>
+                {Array.from({ length: 51 }, (_, i) => i + 10).map((n) => (
+                  <option key={n} value={n}>{n} ans</option>
+                ))}
+              </select>
+            )}
+            {mode === 'signup' && (
+              <input
+                type="email"
+                placeholder={Number(age) && Number(age) < 18 ? "Email d'un parent (obligatoire)" : "Email d'un parent (facultatif)"}
+                enterKeyHint="next"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={parentEmail}
+                onChange={(e) => setParentEmail(e.target.value)}
+                required={Number(age) > 0 && Number(age) < 18}
               />
             )}
             <input
