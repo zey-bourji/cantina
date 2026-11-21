@@ -86,7 +86,7 @@ export default function Login() {
             {mode === 'signup' && (
               <input placeholder="Ton nom" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             )}
-            <input type="email" placeholder="Ton email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+            <input type="email" placeholder="Ton email" enterKeyHint="send" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             <button type="submit" className="btn-big" disabled={busy}>
               {busy ? 'Envoi…' : 'Recevoir mon code'}
             </button>
@@ -98,6 +98,8 @@ export default function Login() {
             <input
               className="otp-input"
               inputMode="numeric"
+              enterKeyHint="go"
+              pattern="[0-9]*"
               autoComplete="one-time-code"
               placeholder="······"
               maxLength={8}
@@ -120,8 +122,8 @@ export default function Login() {
 
         {usePassword && (
           <form onSubmit={loginPassword}>
-            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input type="email" placeholder="Email" enterKeyHint="next" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input type="password" placeholder="Mot de passe" enterKeyHint="go" value={password} onChange={(e) => setPassword(e.target.value)} required />
             <button type="submit" className="btn-big" disabled={busy}>Se connecter</button>
           </form>
         )}

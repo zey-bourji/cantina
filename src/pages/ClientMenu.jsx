@@ -9,6 +9,7 @@ import TabBar from '../components/TabBar'
 import Checkout from '../components/Checkout'
 import { fetchTicket } from '../lib/ticket'
 import { getGuestCart, clearGuestCart } from '../lib/guestCart'
+import { SERVICES, serviceOf, isClosed, closesLabel } from '../lib/services'
 import { ALLERGENS, allergensOf, describe, loadAllergies, saveAllergies } from '../lib/food'
 
 const eff = (d) => Math.round((d.price * (100 - (d.discount_pct || 0))) / 100)
@@ -113,6 +114,7 @@ export default function ClientMenu() {
   }
   const add = (dish) =>
     setCart((c) => {
+      if (isClosed(dish, day)) return c
       const have = c[dish.id]?.qty || 0
       if (dish.left !== null && dish.left !== undefined && have >= dish.left) return c
       return { ...c, [dish.id]: { dish, qty: have + 1 } }
@@ -166,12 +168,20 @@ export default function ClientMenu() {
   const firstName = (profile?.full_name || '').split(' ')[0]
   const count = lines.reduce((s, l) => s + l.qty, 0)
 
+  const dayKeys = Object.keys(menu)
+  const nextDay = dayKeys[dayKeys.indexOf(day) + 1]
   const renderDish = (dish) => (
             <div key={dish.id} className="dish-row">
               <div className="dish-info" role="button" tabIndex={0} onClick={() => setDetail(dish)} onKeyDown={(e) => e.key === 'Enter' && setDetail(dish)}>
                 <strong>{dish.name}</strong>
                 <small>{dish.ready_to_go ? 'Prêt à emporter' : 'Préparé sur place'}</small>
                 {clash(dish).length > 0 && <span className="pill allergy-pill">⚠ Contient : {clash(dish).map((k) => ALLERGENS.find((a) => a[0] === k)?.[1]).join(', ')}</span>}
+                {isClosed(dish, day) && (
+                  <span className="pill closed-pill">
+                    Commandes closes depuis {closesLabel(dish)}
+                    {nextDay && <button className="link-btn" onClick={(e) => { e.stopPropagation(); selectDay(nextDay) }}> Réserver pour demain</button>}
+                  </span>
+                )}
                 {dish.left === 0 && <span className="pill sale" style={{ background: '#eee', color: '#555' }}>Épuisé</span>}
                 {dish.left > 0 && dish.left <= 5 && <span className="pill sale">Plus que {dish.left}</span>}
                 <span className="dish-price">
@@ -189,7 +199,7 @@ export default function ClientMenu() {
                       <span>{cart[dish.id].qty}</span>
                     </>
                   ) : null}
-                  <button onClick={() => add(dish)} disabled={dish.left === 0 || (dish.left != null && (cart[dish.id]?.qty || 0) >= dish.left)}>+</button>
+                  <button onClick={() => add(dish)} disabled={isClosed(dish, day) || dish.left === 0 || (dish.left != null && (cart[dish.id]?.qty || 0) >= dish.left)}>+</button>
                 </div>
               </div>
             </div>
@@ -246,7 +256,7 @@ export default function ClientMenu() {
         </div>
 
         <button className="allergy-bar" onClick={() => setAskAllergy(true)}>
-          {allergies.length ? `🛡 Mes allergies : ${allergies.map((k) => ALLERGENS.find((a) => a[0] === k)?.[1]).join(', ')}` : '🛡 Indiquer mes allergies'}
+          {allergies.length ? `Mes allergies : ${allergies.map((k) => ALLERGENS.find((a) => a[0] === k)?.[1]).join(', ')}` : 'Indiquer mes allergies'}
         </button>
 
         {message && <p className={message.type === 'error' ? 'error' : 'ok'}>{message.text}</p>}
@@ -254,7 +264,7 @@ export default function ClientMenu() {
         {featured.length > 0 && (
           <>
             <div className="section-title">
-              <h2>⭐ Menu du jour</h2>
+              <h2>Menu du jour</h2>
             </div>
             <div className="dishes featured-dishes">{featured.map(renderDish)}</div>
             {rest.length > 0 && (
@@ -264,9 +274,19 @@ export default function ClientMenu() {
             )}
           </>
         )}
-        <div className="dishes">
-          {rest.map(renderDish)}
-        </div>
+        {SERVICES.map((sv) => {
+          const list = rest.filter((d) => serviceOf(d).key === sv.key)
+          if (!list.length) return null
+          return (
+            <div key={sv.key}>
+              <div className="section-title service-title">
+                <h2>{sv.label}</h2>
+                <small>{day === new Date().toLocaleDateString('sv-SE') ? `Commande jusqu'à ${closesLabel({ service: sv.key })}` : 'Réservation'}</small>
+              </div>
+              <div className="dishes">{list.map(renderDish)}</div>
+            </div>
+          )
+        })}
 
         <div className="section-title" id="commandes">
           <h2>Mes commandes</h2>
@@ -342,7 +362,7 @@ export default function ClientMenu() {
             </div>
             {clash(detail).length > 0 && <p className="error">Attention, ce plat peut contenir ce que tu dois éviter.</p>}
             <small className="muted">Liste indiquée d'après la recette. En cas d'allergie sévère, demande à la caisse.</small>
-            <button className="btn-big" style={{ marginTop: 12 }} disabled={detail.left === 0} onClick={() => { add(detail); setDetail(null) }}>Ajouter à ma commande</button>
+            <button className="btn-big" style={{ marginTop: 12 }} disabled={detail.left === 0 || isClosed(detail, day)} onClick={() => { add(detail); setDetail(null) }}>{isClosed(detail, day) ? 'Commandes closes pour aujourd\'hui' : 'Ajouter à ma commande'}</button>
           </div>
         </div>
       )}

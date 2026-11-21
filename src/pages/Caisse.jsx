@@ -68,7 +68,7 @@ export function DayQuantities({ startIndex = 0, title = 'Quantités des plats' }
                 {!inMenu ? 'Pas au menu ce jour' : q === null ? 'Sans limite' : q === 0 ? 'Épuisé' : `${q} restantes`}
               </small>
             </span>
-            <input type="number" min="0" placeholder="Qté" value={vals[d.id] ?? ''} onChange={(e) => setVals({ ...vals, [d.id]: e.target.value })} style={{ width: 80 }} />
+            <input type="number" inputMode="numeric" min="0" placeholder="Qté" value={vals[d.id] ?? ''} onChange={(e) => setVals({ ...vals, [d.id]: e.target.value })} style={{ width: 80 }} />
             <button onClick={() => save(d.id)}>OK</button>
             {inMenu && <button className="secondary" onClick={() => retirer(d.id)}>Retirer</button>}
           </div>
@@ -103,7 +103,7 @@ export function ProposeDish() {
             <option value="boisson">Boisson</option>
           </select>
         </label>
-        <label>Prix (FCFA)<br /><input required type="number" min="0" step="50" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} style={{ width: 110 }} /></label>
+        <label>Prix (FCFA)<br /><input required type="number" inputMode="numeric" min="0" step="50" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} style={{ width: 110 }} /></label>
         <button type="submit">Proposer</button>
       </form>
       {msg && <p className="muted">{msg}</p>}

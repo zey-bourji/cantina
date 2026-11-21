@@ -13,6 +13,7 @@ export default function Accueil() {
   const [loaded, setLoaded] = useState(false)
   const [cart, setCart] = useState(() => getGuestCart()?.items || {})
   const [day, setDay] = useState(null)
+  const [bsmFail, setBsmFail] = useState(false)
 
   useEffect(() => {
     supabase.rpc('public_home').then(({ data }) => {
@@ -70,18 +71,25 @@ export default function Accueil() {
       </div>
 
       <section className="lp-hero">
-        <span className="lp-tag">Vatel Abidjan</span>
-        <h1>La cantine,<br />sans la file d’attente.</h1>
-        <p>Commande depuis ton téléphone, compose ton plat comme tu l’aimes, et récupère-le chaud.</p>
-        <div className="lp-cta">
-          <Link to="/login?mode=signup" className="lp-big">Commander maintenant</Link>
-          <Link to="/login" className="lp-ghost">J’ai déjà un compte</Link>
+        <div className="lp-hero-inner">
+          <div className="lp-hero-copy">
+            <span className="lp-tag">Vatel Abidjan</span>
+            <h1>La cantine, sans la file d’attente.</h1>
+            <p>Commande depuis ton téléphone, compose ton plat comme tu l’aimes, et récupère-le chaud.</p>
+            <div className="lp-cta">
+              <a href="#menu" className="lp-big">Voir le menu</a>
+              <Link to="/login" className="lp-ghost">J’ai déjà un compte</Link>
+            </div>
+          </div>
+          <div className="lp-hero-media">
+            <FoodImg folder="dishes" name={home.today[0]?.name || 'Poulet sauce tomate'} category={home.today[0]?.category} size="fill" />
+          </div>
         </div>
       </section>
 
       <main className="lp-main">
-        <section>
-          <div className="lp-head"><h2>Au menu</h2></div>
+        <section className="lp-section" id="menu">
+          <div className="lp-head"><h2>Au menu</h2><span className="lp-sub">{day ? new Date(day + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}</span></div>
           {loaded && today.length === 0 && <p className="muted">Le menu du jour arrive bientôt.</p>}
           <div className="lp-grid">
             {today.map((d) => (
@@ -98,7 +106,11 @@ export default function Accueil() {
         </section>
 
         <section className="lp-bsm">
-          <img src="/img/best-seller.png" alt="" onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }} />
+          {bsmFail ? (
+            <FoodImg folder="dishes" name={home.best[0]?.name || ''} category={home.best[0]?.category} size={96} />
+          ) : (
+            <img src="/img/best-seller.png" alt="" onError={() => setBsmFail(true)} />
+          )}
           <div>
             <small>Best seller du mois</small>
             <strong>{home.best[0]?.name || 'Notre plat star'}</strong>
@@ -106,8 +118,8 @@ export default function Accueil() {
         </section>
 
         {home.best.length > 0 && (
-          <section>
-            <div className="lp-head"><h2>🔥 Les plus commandés</h2></div>
+          <section className="lp-section">
+            <div className="lp-head"><h2>Les plus commandés</h2></div>
             <div className="lp-grid">
               {home.best.map((d, i) => (
                 <div key={d.name} className="lp-card">
