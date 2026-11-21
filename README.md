@@ -6,15 +6,21 @@ Les élèves consultent le menu, réservent ou composent leur repas, paient et r
 ## Démo
 
 - Application : https://cantina.bourjizeinab17.workers.dev/
-- Comptes de test : _à ajouter (client, caisse, cuisine, admin)_
+- Côté élève : inscris-toi avec ton propre email, tu reçois un code à 6 chiffres.
+- Comptes de démo (bouton « Connexion équipe avec mot de passe », mot de passe `testcantine00`) :
 
-La connexion se fait par code reçu par email. L'équipe peut aussi se connecter avec un mot de passe (« Connexion équipe »).
+| Rôle | Email |
+|---|---|
+| Admin | admin@cantina.demo |
+| Caisse | caisse@cantina.demo |
+| Cuisine | cuisine@cantina.demo |
+| Élève (avec historique) | client@cantina.demo |
 
 ## Ce qui est fait
 
 **Client**
 - Accueil public : plats du jour, panier sans compte, inscription demandée seulement à la validation de la commande
-- Inscription et connexion par code email
+- Inscription et connexion par code email : nom, téléphone, âge, email d'un parent (obligatoire avant 18 ans)
 - Menu par jour, avec les quantités restantes
 - Petit-déjeuner, déjeuner, dîner : chaque service a son heure limite, et après l'heure on peut réserver pour demain
 - Fiche de chaque plat : description, allergènes, alerte selon les allergies déclarées par le client
@@ -26,6 +32,7 @@ La connexion se fait par code reçu par email. L'équipe peut aussi se connecter
 - Installable sur téléphone (PWA) avec un cache hors ligne
 
 **Équipe**
+- Le téléphone de l'élève n'est visible que par l'admin et la caisse, pour l'appeler si besoin
 - Admin : tableau de bord (ventes, comparaison avec la période précédente, export CSV), menus, ajout et suppression de plats avec photos, portions à préparer pour demain, utilisateurs et rôles, droits donnés à la caisse ou à la cuisine
 - Caisse : commandes du jour, quantités de chaque plat par jour, remise au client, annulation avec remboursement
 - Cuisine : commandes à préparer, récapitulatif
@@ -33,9 +40,11 @@ La connexion se fait par code reçu par email. L'équipe peut aussi se connecter
 - Partenaires : stock proposé chaque jour
 - Un plat proposé par la caisse ou la cuisine doit être validé par l'admin
 
-## À venir
+## Phases 2 et 3
 
-Notifications push, plusieurs langues, notes et avis sur les plats, suggestions par IA, vrai paiement Mobile Money.
+- Adresses email pro pour l'équipe (caisse, cuisine) et comptes pour l'équipe de ménage : toute la cantine dans une seule appli
+- Vrai paiement en ligne avec l'intégrateur Babimo
+- Notifications push, plusieurs langues, notes et avis sur les plats, suggestions par IA
 
 ## Technique
 
