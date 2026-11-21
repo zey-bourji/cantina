@@ -1,0 +1,820 @@
+PACK POUR GEMINI - Cantina (React 19 + Vite, pas de Tailwind)
+Ne modifie jamais les appels supabase.rpc / supabase.from, ni les noms d'etats et de props.
+
+
+=================== FICHIER : package.json ===================
+{
+  "name": "cantina",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "vite": "^8.3.6"
+  }
+}
+
+=================== FICHIER : src/pages/Composer.jsx ===================
+import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import Header from '../components/Header'
+import Ticket from '../components/Ticket'
+import FoodImg, { slug } from '../components/FoodImg'
+import TabBar from '../components/TabBar'
+import Checkout from '../components/Checkout'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { fetchTicket } from '../lib/ticket'
+import { fcfa, today } from '../hooks/useOrders'
+
+const CATEGORIES = [
+  ['base', 'Les bases'],
+  ['proteine', 'Les protéines'],
+  ['accompagnement', 'Les accompagnements'],
+  ['legume', 'Les légumes'],
+  ['sauce', 'Les sauces'],
+]
+const PRESETS = [1000, 1500, 2000, 3000]
+
+const ORDER = ['base', 'proteine', 'accompagnement', 'legume', 'sauce']
+
+// Poids d'une portion "parfaite" (en grammes), par ingrédient puis par catégorie
+const GRAMS_BY_CAT = { base: 150, proteine: 120, accompagnement: 100, legume: 80, sauce: 25 }
+const GRAMS = {
+  riz: 150, 'riz-jaune': 150, attieke: 150, 'spaghetti-tomate': 150, 'spaghetti-bolognaise': 150, 'pain-plat': 60,
+  'poulet-braise': 150, 'poisson-braise': 150, 'steak-grille': 150, oeuf: 60, jambon: 40, thon: 80,
+  frites: 100, 'mais-grille': 150, alloco: 100, avocat: 80, tomate: 60, oignon: 30, piment: 5,
+  mayonnaise: 25, ketchup: 20,
+}
+const gramsOf = (ing) => GRAMS[slug(ing.name)] || GRAMS_BY_CAT[ing.category] || 100
+
+// Place n ingrédients dans le bol sans qu'ils se chevauchent.
+// x, y = centre et r = rayon, en % de la largeur du bol.
+function layout(n) {
+  if (n === 0) return []
+  if (n === 1) return [{ x: 50, y: 50, r: 30 }]
+  const ring = (m, rho, r, start, cx = 50, cy = 50) =>
+    Array.from({ length: m }, (_, i) => {
+      const t = ((start + (360 / m) * i) * Math.PI) / 180
+      return { x: cx + rho * Math.cos(t), y: cy + rho * Math.sin(t), r }
+    })
+  if (n === 2) return ring(2, 23, 21, 180)
+  if (n === 3) return ring(3, 23, 20, -90)
+  if (n === 4) return ring(4, 24, 17.5, -135)
+  const m = n - 1
+  const rho = 30
+  const r = Math.min(rho * Math.sin(Math.PI / m) * 0.95, 17)
+  return [{ x: 50, y: 50, r: Math.max(7, rho - r - 3) }, ...ring(m, rho, r, -90)]
+}
+
+
+const SAUCE_COLORS = { mayonnaise: ['#FFF6DA', '#E9DDB4'], ketchup: ['#D8281F', '#A11A13'] }
+// Filet de sauce en zigzag, tracé pendant que la bouteille passe au-dessus du plat
+function Drizzle({ name, q, k }) {
+  const sl = slug(name)
+  const [fill, edge] = SAUCE_COLORS[sl] || ['#B4651F', '#7A4210']
+  const y0 = 30 + k * 12
+  const rows = Math.min(2 + q, 5)
+  let d = `M 22 ${y0}`
+  for (let i = 0; i < rows; i++) {
+    const y = y0 + i * 6
+    d += i % 2 === 0 ? ` Q 50 ${y - 4} 78 ${y + 3}` : ` Q 50 ${y + 7} 22 ${y + 3}`
+  }
+  const w = 1.9 + Math.min(q, 3) * 0.4
+  return (
+    <g>
+      <path d={d} pathLength="1" className="drz" stroke={edge} strokeWidth={w + 0.9} fill="none" strokeLinecap="round" />
+      <path d={d} pathLength="1" className="drz" stroke={fill} strokeWidth={w} fill="none" strokeLinecap="round" />
+      <g>
+        <image href={`/img/ingredients/${sl}.png`} width="26" height="26" x="-13" y="-30" transform="rotate(160)" opacity="0">
+          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.9;1" dur="1.5s" fill="freeze" />
+        </image>
+        <animateMotion dur="1.4s" path={d} fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.6 1" />
+      </g>
+    </g>
+  )
+}
+
+export default function Composer() {
+  const { profile, refreshProfile } = useAuth()
+  const [ingredients, setIngredients] = useState([])
+  const [qty, setQty] = useState({})
+  const [budget, setBudget] = useState(null)
+  const [message, setMessage] = useState(null)
+  const [ticket, setTicket] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [checkout, setCheckout] = useState(false)
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('ingredients').select('*').order('name')
+    setIngredients(data || [])
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const byId = Object.fromEntries(ingredients.map((i) => [i.id, i]))
+  const chosen = Object.entries(qty)
+    .map(([id, q]) => ({ ing: byId[id], q }))
+    .filter((c) => c.ing && c.q > 0)
+  const sorted = [...chosen].sort(
+    (a, b) => ORDER.indexOf(a.ing.category) - ORDER.indexOf(b.ing.category) || a.ing.name.localeCompare(b.ing.name)
+  )
+  const foods = sorted.filter((s) => s.ing.category !== 'sauce')
+  const sauces = sorted.filter((s) => s.ing.category === 'sauce')
+  const spots = layout(foods.length)
+  const grams = chosen.reduce((s, c) => s + gramsOf(c.ing) * c.q, 0)
+  const has = (cat) => chosen.some((c) => c.ing.category === cat)
+  const tip = !has('base')
+    ? 'Ajoute une base (≈ 150 g)'
+    : !has('proteine')
+      ? 'Ajoute une protéine (≈ 120 g)'
+      : !has('legume')
+        ? 'Ajoute un légume (≈ 80 g)'
+        : 'Assiette équilibrée ✔'
+  const total = chosen.reduce((s, c) => s + c.ing.unit_price * c.q, 0)
+  const pct = budget ? Math.min(100, Math.round((total / budget) * 100)) : 0
+
+  function add(ing) {
+    setMessage(null)
+    if (!ing.available || ing.stock_qty <= 0) return
+    const current = qty[ing.id] || 0
+    if (current + 1 > ing.stock_qty) {
+      setMessage({ type: 'error', text: `Il n'en reste plus assez : ${ing.name}.` })
+      return
+    }
+    if (budget && total + ing.unit_price > budget) {
+      setMessage({ type: 'error', text: `Budget de ${fcfa(budget)} atteint !` })
+      return
+    }
+    setQty({ ...qty, [ing.id]: current + 1 })
+  }
+
+  function sub(ing) {
+    setMessage(null)
+    const current = qty[ing.id] || 0
+    if (current > 0) setQty({ ...qty, [ing.id]: current - 1 })
+  }
+
+  function chooseBudget(v) {
+    setMessage(null)
+    if (v && total > v) {
+      setMessage({ type: 'error', text: 'Ton plat dépasse déjà ce budget : retire des ingrédients.' })
+      return
+    }
+    setBudget(v)
+  }
+
+  async function topUp(amount) {
+    const { error } = await supabase.rpc('recharge', { p_amount: amount })
+    if (error) setMessage({ type: 'error', text: error.message })
+    else await refreshProfile()
+  }
+
+  async function validate(method = 'solde') {
+    setBusy(true)
+    setMessage(null)
+    const items = chosen.map((c) => ({ type: 'ingredient', id: c.ing.id, qty: c.q }))
+    const { data, error } = await supabase.rpc('place_order', { p_items: items, p_pickup: today(), p_method: method })
+    if (error) setMessage({ type: 'error', text: error.message })
+    else {
+      setQty({})
+      setCheckout(false)
+      await refreshProfile()
+      load()
+      setTicket(await fetchTicket(data))
+    }
+    setBusy(false)
+  }
+
+  return (
+    <div>
+      <Header />
+      {ticket && <Ticket ticket={ticket} onClose={() => setTicket(null)} />}
+      <main className="container">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Link to="/menu">← Menu</Link>
+          <span className="pill pill-mint">Solde : {fcfa(profile?.balance)}</span>
+        </div>
+        <h2 style={{ marginTop: 10 }}>Compose ton plat</h2>
+
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div className="tabs" style={{ paddingBottom: 8 }}>
+            <span style={{ alignSelf: 'center', fontWeight: 700 }}>Mon budget</span>
+            {PRESETS.map((p) => (
+              <button key={p} className={budget === p ? 'on' : ''} onClick={() => chooseBudget(p)}>
+                {p.toLocaleString('fr-FR')}
+              </button>
+            ))}
+            <button className={!budget ? 'on' : ''} onClick={() => chooseBudget(null)}>
+              Sans limite
+            </button>
+          </div>
+          {budget && (
+            <div className="budget">
+              <div className={pct >= 100 ? 'full' : ''} style={{ width: `${pct}%` }} />
+            </div>
+          )}
+        </div>
+
+        <div className="bowl">
+          <img className="bowl-img" src="/img/bol.png" alt="" onError={(e) => (e.currentTarget.style.display = 'none')} />
+          {chosen.length === 0 && (
+            <div className="bowl-empty">
+              Ton bol est vide.
+              <br />
+              Touche une assiette !
+            </div>
+          )}
+          {foods.map((s, n) => {
+            const z = spots[n]
+            const size = 2 * z.r * 0.84 * Math.min(1.39, Math.sqrt(s.q))
+            return (
+              <div key={s.ing.id} className="in-bowl" style={{ left: `${z.x}%`, top: `${z.y}%`, width: `${size}%`, height: `${size}%` }}>
+                {/* la clé change à chaque ajout : le coup de cuillère se rejoue */}
+                <div key={s.q} className="scoop">
+                  <FoodImg folder="ingredients" name={s.ing.name} category={s.ing.category} size="fill" />
+                </div>
+                {s.q > 1 && <span className="in-bowl-qty">×{s.q}</span>}
+              </div>
+            )
+          })}
+          {sauces.length > 0 && (
+            <svg className="drizzle" viewBox="0 0 100 100" aria-hidden="true">
+              {sauces.map((s, k) => <Drizzle key={`${s.ing.id}-${s.q}`} name={s.ing.name} q={s.q} k={k} />)}
+            </svg>
+          )}
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <div className="display" style={{ fontSize: '2.2rem' }}>
+            {fcfa(total)}
+            {budget && <span className="muted" style={{ fontSize: '1.2rem' }}> / {fcfa(budget)}</span>}
+          </div>
+          {chosen.length > 0 && (
+            <p className="muted" style={{ margin: '2px 0 10px' }}>
+              ≈ <strong>{grams} g</strong> · idéal 400 à 500 g · <strong>{tip}</strong>
+            </p>
+          )}
+          <button className="btn-coral btn-big" disabled={busy || chosen.length === 0} onClick={() => setCheckout(true)}>
+            Valider et payer
+          </button>
+          {message && <p className={message.type === 'error' ? 'error' : 'ok'}>{message.text}</p>}
+        </div>
+
+        {CATEGORIES.map(([cat, label]) => {
+          const list = ingredients.filter((i) => i.category === cat)
+          if (list.length === 0) return null
+          return (
+            <section key={cat} style={{ marginTop: 22 }}>
+              <h3>{label}</h3>
+              <div className="plates">
+                {list.map((ing) => {
+                  const out = !ing.available || ing.stock_qty <= 0
+                  const low = !out && ing.stock_qty <= ing.alert_threshold
+                  const q = qty[ing.id] || 0
+                  return (
+                    <div key={ing.id} className="plate-wrap" style={{ opacity: out ? 0.4 : 1 }}>
+                      <button className={`plate ${q ? 'on' : ''}`} disabled={out} onClick={() => add(ing)}>
+                        <span className="plate-disc">
+                          <FoodImg folder="ingredients" name={ing.name} category={ing.category} size={64} />
+                        </span>
+                        <span className="plate-name">{ing.name}</span>
+                        <span className="plate-price">
+                          {ing.unit_price} F · ≈{gramsOf(ing)} g
+                        </span>
+                        {q > 0 && <span className="plate-qty">{q}</span>}
+                      </button>
+                      <span className="plate-low">{out ? 'Épuisé' : low ? 'Bientôt fini' : ' '}</span>
+                      {q > 0 && (
+                        <button className="mini" onClick={() => sub(ing)}>
+                          − retirer
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })}
+      </main>
+      {checkout && (
+        <Checkout total={total} balance={profile?.balance} busy={busy} error={message?.type === 'error' ? message.text : null} onPay={validate} onTopUp={topUp} onClose={() => setCheckout(false)} />
+      )}
+      <TabBar />
+    </div>
+  )
+}
+
+=================== FICHIER : src/components/FoodImg.jsx ===================
+import { useState } from 'react'
+
+export const slug = (s = '') =>
+  s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+
+// Emojis de secours tant que les vraies images ne sont pas dans /public/img
+const EMOJI = {
+  attieke: '🍚',
+  riz: '🍚',
+  thon: '🐟',
+  'poulet-braise': '🍗',
+  'poisson-braise': '🐟',
+  oeuf: '🥚',
+  alloco: '🍌',
+  tomate: '🍅',
+  oignon: '🧅',
+  piment: '🌶️',
+  mayonnaise: '🫙',
+}
+const CAT = {
+  sandwich: '🥪',
+  salade: '🥗',
+  toast: '🥑',
+  dessert: '🍪',
+  boisson: '🥤',
+  plat_ivoirien: '🍛',
+  base: '🍚',
+  proteine: '🍗',
+  accompagnement: '🍌',
+  legume: '🥬',
+  sauce: '🌶️',
+}
+
+export default function FoodImg({ folder, name, category, size = 64 }) {
+  const fill = size === 'fill'
+  const [failed, setFailed] = useState(false)
+  const s = slug(name)
+  if (!failed) {
+    return (
+      <img
+        src={`/img/${folder}/${s}.png`}
+        alt={name}
+        width={fill ? undefined : size}
+        height={fill ? undefined : size}
+        style={fill ? { width: '100%', height: '100%', objectFit: 'contain' } : { objectFit: 'contain' }}
+        onError={() => setFailed(true)}
+      />
+    )
+  }
+  return (
+    <span role="img" aria-label={name} style={{ fontSize: fill ? 'min(16vw, 74px)' : size * 0.75, lineHeight: 1 }}>
+      {EMOJI[s] || CAT[category] || '🍽️'}
+    </span>
+  )
+}
+
+=================== FICHIER : src/components/Checkout.jsx ===================
+import { useState } from 'react'
+import { fcfa } from '../hooks/useOrders'
+
+const METHODS = [
+  ['solde', 'Mon solde Cantina', '#ffc244'],
+  ['wave', 'Wave', '#1dc8ff'],
+  ['orange_money', 'Orange Money', '#ff7900'],
+  ['carte', 'Carte bancaire', '#6b7280'],
+]
+const mark = { solde: 'C', wave: 'W', orange_money: 'O', carte: '💳' }
+
+// Fenêtre de paiement. Wave, Orange Money et carte sont simulés (aucun vrai argent).
+export default function Checkout({ total, balance, onPay, onTopUp, onClose, busy, error, noSolde }) {
+  const [method, setMethod] = useState(noSolde ? 'wave' : 'solde')
+  const methods = noSolde ? METHODS.filter(([k]) => k !== 'solde') : METHODS
+  const [phone, setPhone] = useState('')
+  const [card, setCard] = useState({ num: '', exp: '', cvc: '' })
+  const [waiting, setWaiting] = useState(false)
+
+  const short = method === 'solde' && Number(balance || 0) < total
+  const phoneOk = /^\d{8,10}$/.test(phone.replace(/\s/g, ''))
+  const cardOk = card.num.replace(/\s/g, '').length >= 12 && card.exp.length >= 4 && card.cvc.length >= 3
+  const ready = method === 'solde' ? !short : method === 'carte' ? cardOk : phoneOk
+
+  function pay() {
+    if (method === 'solde') return onPay('solde')
+    setWaiting(true)
+    setTimeout(async () => {
+      await onPay(method)
+      setWaiting(false)
+    }, 1600)
+  }
+
+  return (
+    <div className="co-overlay" onClick={onClose}>
+      <div className="co-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="co-head">
+          <h3 style={{ margin: 0 }}>Paiement</h3>
+          <button className="btn-light" onClick={onClose} disabled={waiting}>Fermer</button>
+        </div>
+        <div className="co-total">{fcfa(total)}</div>
+
+        <div className="methods">
+          {methods.map(([k, label, color]) => (
+            <button key={k} className={`method ${method === k ? 'on' : ''}`} onClick={() => !waiting && setMethod(k)}>
+              <span className="method-dot" style={{ background: color }}>{mark[k]}</span>
+              <span style={{ flex: 1, textAlign: 'left' }}>
+                {label}
+                {k === 'solde' && <small className="muted" style={{ display: 'block' }}>Disponible : {fcfa(balance)}</small>}
+              </span>
+              <span className="method-radio" />
+            </button>
+          ))}
+        </div>
+
+        {(method === 'wave' || method === 'orange_money') && (
+          <div style={{ marginTop: 12 }}>
+            <input placeholder={`Numéro ${method === 'wave' ? 'Wave' : 'Orange Money'}`} inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%' }} />
+            <small className="muted">Tu recevras une demande de confirmation sur ton téléphone (simulée).</small>
+          </div>
+        )}
+        {method === 'carte' && (
+          <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+            <input placeholder="Numéro de carte" inputMode="numeric" value={card.num} onChange={(e) => setCard({ ...card, num: e.target.value })} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input placeholder="MM/AA" value={card.exp} onChange={(e) => setCard({ ...card, exp: e.target.value })} style={{ flex: 1, minWidth: 0 }} />
+              <input placeholder="CVC" inputMode="numeric" value={card.cvc} onChange={(e) => setCard({ ...card, cvc: e.target.value })} style={{ flex: 1, minWidth: 0 }} />
+            </div>
+          </div>
+        )}
+        {short && (
+          <div className="card" style={{ marginTop: 12 }}>
+            <p className="error" style={{ margin: '0 0 8px' }}>Solde insuffisant : il te manque {fcfa(total - Number(balance || 0))}.</p>
+            {onTopUp && <button className="btn-coral btn-big" style={{ width: '100%' }} onClick={() => onTopUp(Math.max(1000, Math.ceil((total - Number(balance || 0)) / 500) * 500))}>Recharger {fcfa(Math.max(1000, Math.ceil((total - Number(balance || 0)) / 500) * 500))}</button>}
+          </div>
+        )}
+        {error && <p className="error">{error}</p>}
+
+        <button className="btn-coral btn-big" style={{ width: '100%', marginTop: 14 }} disabled={!ready || busy || waiting} onClick={pay}>
+          {waiting ? 'Validation en cours…' : `Payer ${fcfa(total)}`}
+        </button>
+        <p className="muted" style={{ fontSize: '0.78rem', textAlign: 'center', margin: '8px 0 0' }}>
+          Paiement simulé pour la démo : aucun vrai argent n'est débité.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+=================== FICHIER : src/index.css ===================
+:root {
+  --yellow: #ffc72c;
+  --yellow-soft: #ffeaa6;
+  --mint: #7fdbb6;
+  --mint-soft: #d9f6ea;
+  --coral: #ff7a59;
+  --cream: #fff8e6;
+  --ink: #2a2a2a;
+  --muted: #7a7466;
+  --white: #fff;
+  --radius: 22px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+}
+h1, h2, h3, .display {
+  font-family: 'Baloo 2', 'DM Sans', sans-serif;
+  line-height: 1.05;
+  margin: 0 0 0.4em;
+}
+h1 { font-size: 2.6rem; }
+h2 { font-size: 1.7rem; }
+h3 { font-size: 1.25rem; }
+a { color: inherit; }
+
+/* Boutons : tout est rond, gros et un peu rebondissant */
+button {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55em 1.1em;
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-light { background: #fff; }
+.btn-mint { background: var(--mint); }
+.btn-coral { background: var(--coral); color: #fff; }
+.btn-big { padding: 0.8em 1.6em; font-size: 1.1rem; }
+.flat { box-shadow: none; }
+
+input {
+  font: inherit;
+  padding: 0.7em 1em;
+  border: 2px solid var(--yellow-soft);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink);
+  outline: none;
+}
+input:focus { border-color: var(--yellow); }
+
+.container { max-width: 960px; margin: 0 auto; padding: 18px 16px 120px; }
+.card {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.05);
+}
+.muted { color: var(--muted); }
+.error { color: #c62828; font-weight: 600; }
+.ok { color: #1f8a5b; font-weight: 600; }
+
+/* Barre du haut */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--yellow);
+  border-radius: 0 0 26px 26px;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.06);
+}
+.logo { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.8rem; text-decoration: none; }
+.logo span { color: var(--coral); }
+.topbar-right { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; }
+.who { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Pastilles */
+.pill {
+  display: inline-block;
+  padding: 0.25em 0.8em;
+  border-radius: 999px;
+  background: var(--coral);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.pill-mint { background: var(--mint); color: var(--ink); }
+.tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 12px; }
+.tabs button { white-space: nowrap; background: #fff; }
+.tabs button.on { background: var(--mint); }
+
+/* Cartes de plats */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+.dish { text-align: center; display: grid; gap: 6px; justify-items: center; }
+.dish-pic {
+  width: 112px; height: 112px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--yellow-soft));
+  border: 4px solid #fff;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.06);
+}
+.stepper { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.stepper button { width: 34px; height: 34px; padding: 0; }
+
+/* Barre panier collée en bas */
+.cartbar {
+  position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 30;
+  max-width: 600px; margin: 0 auto;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px 12px 10px 20px;
+  background: #fff; border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  animation: rise 0.3s ease-out;
+}
+
+/* Composeur */
+.bowl {
+  position: relative;
+  width: min(310px, 80vw); aspect-ratio: 1;
+  margin: 8px auto 14px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, #fff 0 55%, var(--yellow-soft) 56% 100%);
+  border: 10px solid #fff;
+  box-shadow: 0 14px 0 rgba(0, 0, 0, 0.05), 0 26px 40px rgba(0, 0, 0, 0.12);
+}
+.bowl-img { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: contain; pointer-events: none; }
+.bowl-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 30px; font-weight: 600; }
+.in-bowl {
+  position: absolute; transform: translate(-50%, -50%);
+  display: grid; place-items: center; pointer-events: none;
+  transition: left 0.45s ease, top 0.45s ease, width 0.45s ease, height 0.45s ease;
+}
+.scoop { width: 100%; height: 100%; display: grid; place-items: center; animation: scoop 0.7s cubic-bezier(0.25, 1.2, 0.4, 1) both; filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.25)); }
+.in-bowl-qty { position: absolute; right: 2%; bottom: 2%; background: var(--coral); color: #fff; font-weight: 800; font-size: 0.8rem; border-radius: 99px; padding: 1px 7px; }
+.plates { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 14px 10px; }
+.plate-wrap { display: grid; justify-items: center; gap: 4px; }
+.plate {
+  position: relative; display: grid; justify-items: center; gap: 4px;
+  background: none; box-shadow: none; padding: 0; border-radius: 16px; font-weight: 600;
+}
+.plate:active:not(:disabled) { box-shadow: none; transform: scale(0.94); }
+.plate-disc {
+  width: 92px; height: 92px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #fff; border: 4px solid var(--yellow-soft);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.06);
+  transition: border-color 0.15s;
+}
+.plate.on .plate-disc { border-color: var(--mint); }
+.plate-name { font-size: 0.85rem; line-height: 1.1; }
+.plate-price { font-size: 0.75rem; color: var(--coral); font-weight: 700; }
+.plate-qty {
+  position: absolute; top: -4px; right: 6px;
+  min-width: 26px; height: 26px; border-radius: 13px; padding: 0 6px;
+  display: grid; place-items: center;
+  background: var(--coral); color: #fff; font-size: 0.8rem; font-weight: 800;
+  animation: pop 0.25s ease-out;
+}
+.plate-low { font-size: 0.7rem; color: var(--coral); font-weight: 700; }
+.mini { padding: 0.15em 0.8em; font-size: 0.8rem; background: #fff; }
+
+.budget { height: 14px; background: #fff; border-radius: 14px; overflow: hidden; }
+.budget > div { height: 100%; border-radius: 14px; background: var(--mint); transition: width 0.3s, background 0.3s; }
+.budget > div.full { background: var(--coral); }
+
+/* Animations */
+@keyframes pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes rise { from { transform: translateY(120%); } to { transform: translateY(0); } }
+@keyframes scoop {
+  0% { transform: translate(70%, -90%) rotate(35deg) scale(0.5); opacity: 0; }
+  45% { opacity: 1; }
+  75% { transform: translate(0, 4%) rotate(-4deg) scale(1.08); }
+  100% { transform: translate(0, 0) rotate(0) scale(1); }
+}
+
+/* Connexion */
+.auth-page { min-height: 100vh; background: var(--yellow); display: grid; place-items: center; padding: 20px; }
+.auth-card { width: min(400px, 100%); background: #fff; border-radius: 30px; padding: 26px; box-shadow: 0 10px 0 rgba(0, 0, 0, 0.08); }
+.auth-card form { display: grid; gap: 12px; }
+.link { background: none; box-shadow: none; padding: 0; text-decoration: underline; font-weight: 600; color: var(--muted); }
+
+/* ===== Passe "réaliste" : plus sobre, façon app de livraison ===== */
+:root { --cream: #fff; --radius: 14px; --line: #ececec; --grey: #f4f4f4; --yellow: #ffc244; --yellow-soft: #fff1cc; --coral: #e8553d; --mint: #00a082; --mint-soft: #e3f4f0; }
+body { background: #fff; font-size: 15px; }
+h1, h2, h3, .display { font-family: 'DM Sans', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+h1 { font-size: 2rem; } h2 { font-size: 1.35rem; } h3 { font-size: 1.1rem; }
+button { border-radius: 999px; box-shadow: none; font-weight: 700; padding: 0.6em 1.2em; }
+button:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
+.btn-light { background: var(--grey); }
+.btn-mint { background: var(--mint); color: #fff; }
+.btn-coral { background: var(--yellow); color: var(--ink); }
+.btn-big { padding: 0.85em 1.6em; font-size: 1rem; }
+input { background: var(--grey); border: 1px solid transparent; border-radius: 12px; }
+input:focus { border-color: var(--yellow); background: #fff; }
+.card { border-radius: var(--radius); box-shadow: none; border: 1px solid var(--line); }
+.pill { background: var(--grey); color: var(--ink); font-weight: 700; border-radius: 8px; padding: 0.2em 0.6em; font-size: 0.85rem; }
+.pill-mint { background: var(--mint-soft); color: #00775f; }
+.tabs button { background: #fff; border: 1px solid #ddd; padding: 0.45em 1em; font-weight: 600; }
+.tabs button.on { background: var(--yellow); border-color: var(--yellow); }
+.container { padding-bottom: 150px; }
+
+/* Haut de page */
+.topbar { background: var(--yellow); border-radius: 0; box-shadow: none; padding: 12px 16px; }
+.logo { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 1.35rem; letter-spacing: -0.03em; }
+.logo span { color: var(--ink); }
+.topbar-right button { background: rgba(255, 255, 255, 0.55); padding: 0.4em 0.9em; font-size: 0.85rem; }
+.hero { background: var(--yellow); padding: 4px 16px 22px; }
+.hero-in { max-width: 960px; margin: 0 auto; }
+.hero h2 { margin: 6px 0 12px; font-size: 1.6rem; }
+.wallet { background: #fff; border-radius: 16px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wallet small { color: var(--muted); display: block; }
+.wallet strong { font-size: 1.3rem; letter-spacing: -0.02em; }
+.wallet-btns { display: flex; gap: 6px; }
+.wallet-btns button { padding: 0.4em 0.8em; font-size: 0.85rem; }
+.promo { display: flex; align-items: center; gap: 12px; margin: 16px 0 6px; padding: 14px 16px; border-radius: 16px; background: #ffe6e0; text-decoration: none; }
+.promo b { font-size: 1.05rem; display: block; }
+.promo .go { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-weight: 800; flex: none; }
+.section-title { display: flex; justify-content: space-between; align-items: center; margin: 22px 0 8px; }
+.section-title h2 { margin: 0; }
+
+/* Plats : texte à gauche, photo à droite */
+.dishes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0 18px; }
+.dish-row { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.dish-info { display: grid; gap: 3px; align-content: start; min-width: 0; }
+.dish-info strong { font-size: 1rem; }
+.dish-info small { color: var(--muted); }
+.dish-price { font-weight: 700; margin-top: 4px; }
+.dish-photo { position: relative; flex: none; width: 104px; height: 104px; border-radius: 14px; background: var(--grey); display: grid; place-items: center; }
+.dish-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.dish-add { position: absolute; right: 6px; bottom: 6px; display: flex; align-items: center; background: #fff; border-radius: 999px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22); }
+.dish-add button { width: 32px; height: 32px; padding: 0; background: transparent; font-size: 1.2rem; line-height: 1; }
+.dish-add span { min-width: 18px; text-align: center; font-weight: 700; }
+.order-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+
+/* Barre d'onglets en bas */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: #fff; border-top: 1px solid var(--line); display: flex; justify-content: center; gap: 6px; padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); }
+.tabbar a { flex: 1; max-width: 140px; display: grid; justify-items: center; gap: 2px; padding: 6px 0; border-radius: 14px; text-decoration: none; font-size: 0.72rem; font-weight: 600; color: #555; }
+.tabbar a.on { background: var(--grey); color: var(--ink); }
+.tabbar svg { width: 22px; height: 22px; }
+.cartbar { bottom: 74px; border-radius: 16px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2); background: var(--ink); color: #fff; }
+.cartbar .btn-coral { background: var(--yellow); }
+
+/* Composeur plus sobre */
+.bowl { background: var(--grey); border: 0; box-shadow: 0 2px 0 var(--line); }
+.plate-disc { background: var(--grey); border: 3px solid transparent; box-shadow: none; }
+.plate.on .plate-disc { border-color: var(--yellow); }
+.plate-price { color: var(--muted); font-weight: 600; }
+.plate-qty { background: var(--ink); }
+.plate-low { color: var(--coral); }
+.in-bowl-qty { background: var(--ink); }
+
+/* ===== Pages équipe : admin, caisse, cuisine ===== */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.kpi { background: var(--grey); border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; }
+.kpi small { color: var(--muted); }
+.kpi strong { font-size: 1.5rem; letter-spacing: -0.02em; }
+.bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 190px; padding-top: 10px; }
+.bar-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 4px; }
+.bar-col .bar { width: 100%; max-width: 48px; min-height: 3px; background: var(--yellow); border-radius: 8px 8px 0 0; transition: height 0.4s; }
+.bar-col small { color: var(--muted); font-size: 0.72rem; }
+.bar-val { font-size: 0.75rem; font-weight: 700; }
+.hbar { display: grid; grid-template-columns: minmax(90px, 1.2fr) 3fr auto; gap: 10px; align-items: center; padding: 5px 0; }
+.hbar div { background: var(--grey); border-radius: 8px; height: 14px; overflow: hidden; }
+.hbar i { display: block; height: 100%; background: var(--yellow); border-radius: 8px; }
+.tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.ticket-card ul { margin: 8px 0; padding-left: 18px; }
+.ticket-head, .ticket-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ticket-card.arriving { border: 2px solid var(--coral); }
+.arrive-tag { color: var(--coral); font-weight: 800; margin-top: 4px; }
+.recap { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.recap-item { display: flex; align-items: center; gap: 12px; background: var(--grey); border-radius: 14px; padding: 12px 14px; }
+.recap-item b { font-size: 2rem; letter-spacing: -0.03em; }
+.topnav { display: flex; gap: 4px; flex: 1; justify-content: center; }
+.topnav a { padding: 4px 10px; border-radius: 999px; font-weight: 600; font-size: 0.85rem; text-decoration: none; }
+.topnav a:hover { background: rgba(255, 255, 255, 0.55); }
+.select { font: inherit; padding: 0.65em 1em; background: var(--grey); border: 1px solid transparent; border-radius: 12px; }
+@media (max-width: 640px) { .topnav { display: none; } }
+
+/* Plateau */
+.steps { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; }
+.step { display: flex; align-items: center; gap: 6px; background: var(--grey); white-space: nowrap; font-weight: 600; padding: 0.45em 1em 0.45em 0.5em; }
+.step span { width: 22px; height: 22px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 0.75rem; font-weight: 800; }
+.step.on { background: var(--yellow); }
+.step.done span { background: var(--mint); color: #fff; }
+.opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.opt { display: grid; justify-items: center; gap: 4px; padding: 12px 8px; background: #fff; border: 2px solid var(--line); border-radius: 16px; font-weight: 500; text-align: center; }
+.opt.on { border-color: var(--yellow); background: var(--yellow-soft); }
+.opt-pic { width: 92px; height: 92px; border-radius: 14px; background: var(--grey); display: grid; place-items: center; overflow: hidden; }
+.opt small { color: var(--muted); }
+
+/* Promos et fidélité */
+.pill.sale { background: var(--coral); color: #fff; margin-left: 6px; }
+.loyal { margin: 14px 0 4px; padding: 12px 14px; border-radius: 16px; background: var(--mint-soft); }
+.loyal-top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.loyal-bar { height: 8px; border-radius: 8px; background: #fff; margin-top: 8px; overflow: hidden; }
+.loyal-bar i { display: block; height: 100%; background: var(--mint); border-radius: 8px; transition: width 0.4s; }
+
+.shortcuts { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 16px; }
+.shortcuts a { font-size: 0.85rem; font-weight: 600; text-decoration: none; padding: 0.35em 0.9em; border-radius: 999px; background: var(--yellow-soft); }
+
+/* Paiement */
+.co-overlay { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.35); display: flex; align-items: flex-end; justify-content: center; animation: rc-fade 0.2s; }
+.co-sheet { width: min(480px, 100%); max-height: 92vh; overflow: auto; background: #fff; border-radius: 22px 22px 0 0; padding: 18px 18px 26px; animation: rise 0.28s ease-out; }
+@media (min-width: 640px) { .co-overlay { align-items: center; } .co-sheet { border-radius: 22px; } }
+.co-head { display: flex; justify-content: space-between; align-items: center; }
+.co-total { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin: 6px 0 12px; }
+.methods { display: grid; gap: 8px; }
+.method { display: flex; align-items: center; gap: 12px; width: 100%; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; font-weight: 600; }
+.method.on { border-color: var(--yellow); background: var(--yellow-soft); }
+.method-dot { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800; }
+.method-radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #bbb; }
+.method.on .method-radio { border: 6px solid var(--ink); }
+
+.supersale { display: grid; gap: 2px; padding: 16px 18px; border-radius: 18px; background: var(--yellow); }
+.supersale small { font-weight: 700; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.72rem; }
+.supersale strong { font-size: 1.5rem; letter-spacing: -0.02em; }
+.perms { display: grid; gap: 2px; margin-top: 6px; font-size: 0.85rem; }
+
+/* Sauces versées sur le plat */
+.drizzle { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25)); }
+.drz { stroke-dasharray: 1; stroke-dashoffset: 1; animation: drz 1.4s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+@keyframes drz { to { stroke-dashoffset: 0; } }

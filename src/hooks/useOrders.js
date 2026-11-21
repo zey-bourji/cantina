@@ -34,7 +34,7 @@ export function useOrders(day, intervalMs = 5000) {
     const { data } = await supabase
       .from('orders')
       .select(
-        'id, number, status, total, pickup_day, arriving, created_at, profiles(full_name), order_items(label, qty)'
+        'id, number, status, total, pickup_day, arriving, created_at, payment_method, walkin_name, profiles(full_name), order_items(label, qty)'
       )
       .eq('pickup_day', day)
       .order('created_at')

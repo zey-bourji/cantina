@@ -1,16 +1,58 @@
-# React + Vite
+# Cantina
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Application de la cantine de Vatel Abidjan, réalisée pour le Hackathon Restauration Vatel (21 novembre 2026).
+Les élèves consultent le menu de la semaine, réservent ou composent leur repas, paient et récupèrent leur commande. L'équipe de la cantine gère tout depuis un tableau de bord.
 
-Currently, two official plugins are available:
+## Démo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Application : _lien Cloudflare Pages à ajouter_
+- Comptes de test : _à ajouter (client, caisse, cuisine, admin)_
 
-## React Compiler
+## Ce qui est fait
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Client**
+- Inscription, connexion
+- Menu de la semaine, jour par jour, avec les quantités restantes
+- Commande ou réservation d'un plat
+- Composer son bol (prix en direct, grammes par portion) et composer son plateau (entrée, plat, dessert, boisson, sauce)
+- Solde, recharge, historique des commandes
+- Paiement : solde, Wave, Orange Money, carte (Mobile Money et carte simulés pour la démo)
+- Ticket de commande animé, bouton « J'arrive dans 5 min »
+- Remises de fin de journée, fidélité (-10 % à partir de la 6e commande du mois)
 
-## Expanding the ESLint configuration
+**Équipe**
+- Admin : menus, plats, stock, utilisateurs et rôles, droits donnés à la caisse ou à la cuisine, statistiques par jour, semaine, mois et année, « super vente du mois »
+- Caisse : commandes du jour, quantités de chaque plat par jour, remise au client, annulation avec remboursement
+- Cuisine : commandes à préparer, récapitulatif
+- Courses : liste de courses à partir des seuils de stock, budget du coursier, réception des achats
+- Partenaires : stock proposé chaque jour
+- Un plat proposé par la caisse ou la cuisine doit être validé par l'admin
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## À venir
+
+Notifications push, mode hors ligne, application mobile native, plusieurs langues, vrai paiement Mobile Money.
+
+## Technique
+
+- React 19 + Vite, React Router
+- Supabase : base Postgres, authentification, règles d'accès (RLS), fonctions SQL pour les commandes, les paiements et le stock
+- Déploiement : Cloudflare Pages
+
+## Lancer en local
+
+```bash
+npm install
+cp .env.example .env   # puis renseigner l'URL et la clé Supabase
+npm run dev
+```
+
+Variables d'environnement :
+
+```
+VITE_SUPABASE_URL=
+VITE_SUPABASE_KEY=
+```
+
+## Auteure
+
+Zeinab Bourji (Zey), étudiante en 3e année d'informatique à l'USJ-CI, Abidjan.
