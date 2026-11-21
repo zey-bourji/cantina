@@ -3432,3 +3432,24 @@ button:active:not(:disabled) { transform: scale(0.97); }
   background: var(--yellow, #FBE3A1); color: #1D1D1B;
   font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer;
 }
+
+/* Accueil — bandeau centré sur fond d'illustrations, sans photo */
+.lp-hero { padding: 56px 20px 60px; }
+.lp-hero::before {
+  background-image: url('/img/doodle-hero.png');
+  background-repeat: repeat-x;
+  background-position: center;
+  background-size: auto 100%;
+  opacity: 0.16;
+}
+.lp-hero-inner { grid-template-columns: 1fr !important; justify-items: center; }
+.lp-hero-copy { align-items: center; text-align: center; }
+.lp-hero h1, .lp-hero p { text-align: center; }
+.lp-hero p { max-width: 32ch; margin-left: auto; margin-right: auto; }
+.lp-hero .lp-cta { justify-content: center; }
+.lp-hero-media { display: none; }
+@media (min-width: 760px) {
+  .lp-hero { padding: 96px 24px 100px; }
+  .lp-hero h1 { font-size: 3.2rem; }
+  .lp-hero p { font-size: 1.05rem; }
+}

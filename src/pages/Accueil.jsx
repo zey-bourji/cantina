@@ -138,9 +138,6 @@ export default function Accueil() {
               <Link to="/login?mode=signup" className="lp-big">Commander maintenant</Link>
             </div>
           </div>
-          <div className="lp-hero-media">
-            <DishPhoto dish={starDish || { name: '' }} />
-          </div>
         </div>
       </section>
 
