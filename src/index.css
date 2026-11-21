@@ -3418,3 +3418,17 @@ button:active:not(:disabled) { transform: scale(0.97); }
 }
 .closed-line .reserve-btn:active { transform: scale(0.97); }
 .dish-row .dish-price { margin-top: 4px; }
+
+/* Menu — l'essentiel seulement : nom, prix, photo */
+.dish-row .dish-info { justify-content: center; gap: 6px; }
+.dish-row .dish-info strong { font-size: 1.05rem; }
+.dish-row .dish-price { margin-top: 2px; font-size: 1rem; }
+.dish-row.is-closed .dish-photo img { filter: grayscale(0.6); opacity: 0.6; }
+.dish-row.is-closed .dish-info strong,
+.dish-row.is-closed .dish-price { color: rgba(29, 29, 27, 0.55); }
+.dish-add .add-tomorrow {
+  width: auto !important; min-width: 0; height: 32px; padding: 0 12px;
+  border-radius: 999px; border: 0;
+  background: var(--yellow, #FBE3A1); color: #1D1D1B;
+  font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+}

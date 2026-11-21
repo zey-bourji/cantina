@@ -171,17 +171,10 @@ export default function ClientMenu() {
   const dayKeys = Object.keys(menu)
   const nextDay = dayKeys[dayKeys.indexOf(day) + 1]
   const renderDish = (dish) => (
-            <div key={dish.id} className="dish-row">
+            <div key={dish.id} className={`dish-row ${isClosed(dish, day) ? 'is-closed' : ''}`}>
               <div className="dish-info" role="button" tabIndex={0} onClick={() => setDetail(dish)} onKeyDown={(e) => e.key === 'Enter' && setDetail(dish)}>
                 <strong>{dish.name}</strong>
-                <small>{dish.ready_to_go ? 'Prêt à emporter' : 'Préparé sur place'}</small>
                 {clash(dish).length > 0 && <span className="pill allergy-pill">⚠ Contient : {clash(dish).map((k) => ALLERGENS.find((a) => a[0] === k)?.[1]).join(', ')}</span>}
-                {isClosed(dish, day) && (
-                  <span className="closed-line">
-                    <small>Fermé depuis {closesLabel(dish)}</small>
-                    {nextDay && <button className="reserve-btn" onClick={(e) => { e.stopPropagation(); selectDay(nextDay) }}>Réserver pour demain</button>}
-                  </span>
-                )}
                 {dish.left === 0 && <span className="pill sale" style={{ background: '#eee', color: '#555' }}>Épuisé</span>}
                 {dish.left > 0 && dish.left <= 5 && <span className="pill sale">Plus que {dish.left}</span>}
                 <span className="dish-price">
@@ -199,7 +192,11 @@ export default function ClientMenu() {
                       <span>{cart[dish.id].qty}</span>
                     </>
                   ) : null}
-                  <button onClick={() => add(dish)} disabled={isClosed(dish, day) || dish.left === 0 || (dish.left != null && (cart[dish.id]?.qty || 0) >= dish.left)}>+</button>
+                  {isClosed(dish, day) ? (
+                    nextDay && <button className="add-tomorrow" onClick={() => selectDay(nextDay)}>Demain</button>
+                  ) : (
+                    <button onClick={() => add(dish)} disabled={dish.left === 0 || (dish.left != null && (cart[dish.id]?.qty || 0) >= dish.left)}>+</button>
+                  )}
                 </div>
               </div>
             </div>
