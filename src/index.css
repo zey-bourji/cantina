@@ -4590,3 +4590,20 @@ button:active:not(:disabled) { transform: scale(0.97); }
     transition: none !important;
   }
 }
+
+/* ===== Composer : garde-fous mobile (annule les anciennes règles .bowl / .cmp-layout) ===== */
+.composer-page { overflow-x: clip; max-width: 100vw; }
+.composer-page .cmp-layout > *,
+.composer-page .cmp-stage-card,
+.composer-page .cmp-catalog-col,
+.composer-page .cmp-stage-col { min-width: 0; max-width: 100%; }
+.composer-page .cmp-layout { grid-template-columns: minmax(0, 1fr); }
+.composer-page .bowl {
+  width: auto; height: auto; aspect-ratio: auto; margin: 0;
+  background: none; border: 0; max-width: none;
+}
+.composer-page .bowl::before { content: none; }
+.composer-page .bowl-frame { max-width: 100%; }
+@media (min-width: 760px) {
+  .composer-page .cmp-layout { grid-template-columns: 340px minmax(0, 1fr); }
+}

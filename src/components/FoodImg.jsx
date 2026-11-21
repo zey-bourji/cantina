@@ -56,6 +56,8 @@ export function dishImage(name) {
   return best || s
 }
 
+export const hasDishImage = (name) => DISH_IMGS.includes(dishImage(name))
+
 export default function FoodImg({ folder, name, category, size = 64 }) {
   const fill = size === 'fill'
   const [failed, setFailed] = useState(false)
