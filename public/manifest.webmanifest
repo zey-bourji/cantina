@@ -1,12 +1,24 @@
 {
+  "id": "/menu",
   "name": "Cantina · la cantine de Vatel",
   "short_name": "Cantina",
+  "description": "Commande ton repas, compose ton plat et récupère-le sans attendre à la cantine de Vatel Abidjan.",
+  "lang": "fr",
   "start_url": "/menu",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#FFFFFF",
   "theme_color": "#FFC244",
+  "categories": ["food", "lifestyle"],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Composer mon plat", "short_name": "Composer", "url": "/composer", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Mon plateau-repas", "short_name": "Plateau", "url": "/plateau", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Mon compte", "short_name": "Compte", "url": "/compte", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ]
 }
