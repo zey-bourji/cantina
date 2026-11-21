@@ -606,7 +606,7 @@ export default function Composer() {
   }
 
   return (
-    <div>
+    <div className="composer-page">
       <Header />
       {ticket && <Ticket ticket={ticket} onClose={() => setTicket(null)} />}
 
@@ -638,7 +638,7 @@ export default function Composer() {
         </div>
       )}
 
-      <main className="container">
+      <main className="container cmp-container">
         <div className="cmp-topbar-row">
           <Link to="/menu" className="cmp-back">
             <IconArrowLeft />
@@ -844,7 +844,7 @@ export default function Composer() {
                 )}
               </div>
 
-              <div className="tabs" style={{ paddingBottom: budget ? 8 : 0 }}>
+              <div className="tabs tabs-budget" style={{ paddingBottom: budget ? 8 : 0 }}>
                 {PRESETS.map((p) => (
                   <button key={p} className={budget === p ? 'on' : ''} onClick={() => chooseBudget(p)}>
                     {p.toLocaleString('fr-FR')} F
@@ -856,9 +856,9 @@ export default function Composer() {
               </div>
 
               {budget && (
-                <div className="budget">
+                <div className="budget budget-bar-track">
                   <div
-                    className={pct >= 100 ? 'full' : pct >= 85 ? 'warn' : ''}
+                    className={`budget-progress-fill ${pct >= 100 ? 'full' : pct >= 85 ? 'warn' : ''}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -866,7 +866,7 @@ export default function Composer() {
             </div>
 
             <div className="cmp-cat-nav">
-              <div className="tabs" style={{ paddingBottom: 2 }}>
+              <div className="tabs tabs-categories" style={{ paddingBottom: 2 }}>
                 <button className={activeCat === 'all' ? 'on' : ''} onClick={() => jumpToCategory('all')}>
                   Tout
                 </button>
@@ -909,7 +909,11 @@ export default function Composer() {
                             </span>
                             {q > 0 && <span className="plate-qty">{q}</span>}
                           </button>
-                          <span className="plate-low">{out ? 'Épuisé' : low ? 'Bientôt fini' : ''}</span>
+                          {out ? (
+                            <span className="plate-low state-out">Épuisé</span>
+                          ) : low ? (
+                            <span className="plate-low state-low">Bientôt fini</span>
+                          ) : null}
                           {q > 0 && (
                             <button className="mini" onClick={() => sub(ing)}>
                               <IconMinus />
