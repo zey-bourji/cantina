@@ -8,6 +8,7 @@ import FoodImg from '../components/FoodImg'
 import TabBar from '../components/TabBar'
 import Checkout from '../components/Checkout'
 import { fetchTicket } from '../lib/ticket'
+import { ALLERGENS, allergensOf, describe, loadAllergies, saveAllergies } from '../lib/food'
 
 const eff = (d) => Math.round((d.price * (100 - (d.discount_pct || 0))) / 100)
 const fcfa = (n) => `${Number(n || 0).toLocaleString('fr-FR')} FCFA`
@@ -36,6 +37,17 @@ export default function ClientMenu() {
   const [ticket, setTicket] = useState(null)
   const [monthCount, setMonthCount] = useState(0)
   const [checkout, setCheckout] = useState(false)
+  const [detail, setDetail] = useState(null)
+  const [allergies, setAllergies] = useState(loadAllergies)
+  const [askAllergy, setAskAllergy] = useState(() => localStorage.getItem('cantina_allergies') === null)
+  const toggleAllergy = (k) =>
+    setAllergies((a) => {
+      const n = a.includes(k) ? a.filter((x) => x !== k) : [...a, k]
+      saveAllergies(n)
+      return n
+    })
+  const closeAllergy = () => { saveAllergies(allergies); setAskAllergy(false) }
+  const clash = (d) => allergensOf(d).filter((a) => allergies.includes(a))
 
   const loadMenu = useCallback(async () => {
     const today = new Date().toLocaleDateString('sv-SE')
@@ -140,9 +152,10 @@ export default function ClientMenu() {
 
   const renderDish = (dish) => (
             <div key={dish.id} className="dish-row">
-              <div className="dish-info">
+              <div className="dish-info" role="button" tabIndex={0} onClick={() => setDetail(dish)} onKeyDown={(e) => e.key === 'Enter' && setDetail(dish)}>
                 <strong>{dish.name}</strong>
                 <small>{dish.ready_to_go ? 'Prêt à emporter' : 'Préparé sur place'}</small>
+                {clash(dish).length > 0 && <span className="pill allergy-pill">⚠ Contient : {clash(dish).map((k) => ALLERGENS.find((a) => a[0] === k)?.[1]).join(', ')}</span>}
                 {dish.left === 0 && <span className="pill sale" style={{ background: '#eee', color: '#555' }}>Épuisé</span>}
                 {dish.left > 0 && dish.left <= 5 && <span className="pill sale">Plus que {dish.left}</span>}
                 <span className="dish-price">
@@ -152,7 +165,7 @@ export default function ClientMenu() {
                 </span>
               </div>
               <div className="dish-photo">
-                <FoodImg folder="dishes" name={dish.name} category={dish.category} size={72} />
+                <span onClick={() => setDetail(dish)} style={{ cursor: 'pointer', display: 'contents' }}><FoodImg folder="dishes" name={dish.name} category={dish.category} size={72} /></span>
                 <div className="dish-add">
                   {cart[dish.id] ? (
                     <>
@@ -216,6 +229,10 @@ export default function ClientMenu() {
           ))}
         </div>
 
+        <button className="allergy-bar" onClick={() => setAskAllergy(true)}>
+          {allergies.length ? `🛡 Mes allergies : ${allergies.map((k) => ALLERGENS.find((a) => a[0] === k)?.[1]).join(', ')}` : '🛡 Indiquer mes allergies'}
+        </button>
+
         {message && <p className={message.type === 'error' ? 'error' : 'ok'}>{message.text}</p>}
 
         {featured.length > 0 && (
@@ -274,6 +291,44 @@ export default function ClientMenu() {
       )}
       {checkout && (
         <Checkout total={total} balance={profile?.balance} busy={busy} error={message?.type === 'error' ? message.text : null} onPay={order} onTopUp={topUp} onClose={() => setCheckout(false)} />
+      )}
+
+      {askAllergy && (
+        <div className="modal-back" onClick={closeAllergy}>
+          <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
+            <h3>Des allergies ou intolérances ?</h3>
+            <p className="muted">Choisis ce que tu dois éviter. On te prévient sur chaque plat concerné.</p>
+            <div className="allergy-grid">
+              {ALLERGENS.map(([k, label, ico]) => (
+                <button key={k} className={allergies.includes(k) ? 'chip on' : 'chip'} onClick={() => toggleAllergy(k)}>{ico} {label}</button>
+              ))}
+            </div>
+            <button className="btn-big" onClick={closeAllergy}>{allergies.length ? 'Enregistrer' : "Je n'ai pas d'allergie"}</button>
+          </div>
+        </div>
+      )}
+      {detail && (
+        <div className="modal-back" onClick={() => setDetail(null)}>
+          <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-x" onClick={() => setDetail(null)} aria-label="Fermer">×</button>
+            <div className="detail-photo"><FoodImg folder="dishes" name={detail.name} category={detail.category} size="fill" /></div>
+            <h3>{detail.name}</h3>
+            <p className="detail-price">{fcfa(eff(detail))}{detail.discount_pct > 0 && <s className="muted"> {fcfa(detail.price)}</s>}</p>
+            <p>{describe(detail)}</p>
+            <p className="muted" style={{ margin: '4px 0 8px' }}>{detail.ready_to_go ? 'Prêt à emporter' : 'Préparé sur place à la commande'}</p>
+            <strong>Allergènes possibles</strong>
+            <div className="allergy-grid" style={{ margin: '8px 0 12px' }}>
+              {allergensOf(detail).length === 0 && <span className="muted">Aucun allergène courant détecté.</span>}
+              {allergensOf(detail).map((k) => {
+                const a = ALLERGENS.find((x) => x[0] === k)
+                return <span key={k} className={allergies.includes(k) ? 'chip danger' : 'chip'}>{a?.[2]} {a?.[1]}</span>
+              })}
+            </div>
+            {clash(detail).length > 0 && <p className="error">Attention, ce plat peut contenir ce que tu dois éviter.</p>}
+            <small className="muted">Liste indiquée d'après la recette. En cas d'allergie sévère, demande à la caisse.</small>
+            <button className="btn-big" style={{ marginTop: 12 }} disabled={detail.left === 0} onClick={() => { add(detail); setDetail(null) }}>Ajouter à ma commande</button>
+          </div>
+        </div>
       )}
       <TabBar />
     </div>

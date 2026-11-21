@@ -13,6 +13,7 @@ import Partenaire from './pages/Partenaire'
 import Gestion from './pages/Gestion'
 import Compte from './pages/Compte'
 import Inbox from './pages/Inbox'
+import Accueil from './pages/Accueil'
 
 const HOME = {
   client: '/menu',
@@ -44,7 +45,7 @@ function Protected({ roles, children }) {
 function HomeRedirect() {
   const { session, profile, loading } = useAuth()
   if (loading) return <p style={{ padding: 20 }}>Chargement…</p>
-  if (!session) return <Navigate to="/login" replace />
+  if (!session) return <Accueil />
   if (!profile) return <ProfileError />
   return <Navigate to={HOME[profile.role] || '/menu'} replace />
 }

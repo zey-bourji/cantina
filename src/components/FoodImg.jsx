@@ -36,6 +36,26 @@ const CAT = {
   sauce: '🌶️',
 }
 
+// Photos de plats disponibles dans /public/img/dishes (sans extension)
+const DISH_IMGS = ['cookie-geant','foutou-sauce','sandwich-poulet','toast-avocat-oeuf','toast-champignon','toast-fraise','toast-grenade-feta','toast-oeuf-brouille','toast-oeuf-dur','toast-pois-chiche','toast-saumon-avocat','toast-saumon-concombre','toast-saumon-fromage','toast-tomate-mozza']
+const STOP = new Set(['au', 'aux', 'a', 'de', 'du', 'la', 'le', 'les', 'et', 'd', 'l', 'en', 'avec', 'sur'])
+const toks = (s) => slug(s).split('-').filter((t) => t && !STOP.has(t))
+
+// Trouve la meilleure photo même si le nom en base n'est pas exactement celui du fichier
+export function dishImage(name) {
+  const s = folder === 'dishes' ? dishImage(name) : slug(name)
+  if (DISH_IMGS.includes(s)) return s
+  const t = toks(name)
+  let best = null, bestScore = 0
+  for (const img of DISH_IMGS) {
+    const it = toks(img)
+    const common = t.filter((x) => it.some((y) => y === x || y.startsWith(x) || x.startsWith(y))).length
+    const score = common - (it.length - common) * 0.1
+    if (common > 0 && score > bestScore) { best = img; bestScore = score }
+  }
+  return best || s
+}
+
 export default function FoodImg({ folder, name, category, size = 64 }) {
   const fill = size === 'fill'
   const [failed, setFailed] = useState(false)
