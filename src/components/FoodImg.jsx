@@ -37,7 +37,7 @@ const CAT = {
 }
 
 // Photos de plats disponibles dans /public/img/dishes (sans extension)
-const DISH_IMGS = ['cookie-geant','foutou-sauce','sandwich-poulet','toast-avocat-oeuf','toast-champignon','toast-fraise','toast-grenade-feta','toast-oeuf-brouille','toast-oeuf-dur','toast-pois-chiche','toast-saumon-avocat','toast-saumon-concombre','toast-saumon-fromage','toast-tomate-mozza']
+const DISH_IMGS = ['cookie-geant','foutou-sauce','sandwich-poulet','toast-avocat-oeuf','toast-champignon','toast-fraise','toast-grenade-feta','toast-oeuf-brouille','toast-oeuf-dur','toast-pois-chiche','toast-saumon-avocat','toast-saumon-concombre','toast-saumon-fromage','toast-tomate-mozza','jus-de-bissap','bouteille-bissap','poulet-sauce-tomate','riz-sauce-arachide','salade-grecque','salade-de-pates']
 const STOP = new Set(['au', 'aux', 'a', 'de', 'du', 'la', 'le', 'les', 'et', 'd', 'l', 'en', 'avec', 'sur'])
 const toks = (s) => slug(s).split('-').filter((t) => t && !STOP.has(t))
 

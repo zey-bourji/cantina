@@ -8,6 +8,7 @@ import FoodImg from '../components/FoodImg'
 import TabBar from '../components/TabBar'
 import Checkout from '../components/Checkout'
 import { fetchTicket } from '../lib/ticket'
+import { getGuestCart, clearGuestCart } from '../lib/guestCart'
 import { ALLERGENS, allergensOf, describe, loadAllergies, saveAllergies } from '../lib/food'
 
 const eff = (d) => Math.round((d.price * (100 - (d.discount_pct || 0))) / 100)
@@ -63,6 +64,21 @@ export default function ClientMenu() {
       grouped[row.day].push({ ...row.dishes, left: row.qty, featured: !!row.featured })
     }
     setMenu(grouped)
+    const guest = getGuestCart()
+    if (guest?.items && guest.day && grouped[guest.day]) {
+      // panier commencé avant l'inscription : on le retrouve ici
+      const restored = {}
+      for (const g of Object.values(guest.items)) {
+        const dish = grouped[guest.day].find((x) => x.id === g.id)
+        if (dish && dish.left !== 0) restored[dish.id] = { dish, qty: dish.left != null ? Math.min(g.qty, dish.left) : g.qty }
+      }
+      clearGuestCart()
+      if (Object.keys(restored).length) {
+        setDay(guest.day)
+        setCart(restored)
+        return
+      }
+    }
     setDay((d) => d || Object.keys(grouped)[0] || null)
   }, [])
 

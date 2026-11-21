@@ -2,29 +2,54 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import FoodImg from '../components/FoodImg'
+import { getGuestCart, setGuestCart } from '../lib/guestCart'
+import { isClosed, closesLabel } from '../lib/services'
 
 const fcfa = (n) => `${Number(n || 0).toLocaleString('fr-FR')} FCFA`
 const eff = (d) => Math.round((d.price * (100 - (d.discount_pct || 0))) / 100)
 
-const STEPS = [
-  { n: 1, t: 'Choisis', d: 'Un plat du jour, un plateau ou ton propre plat, ingrédient par ingrédient.' },
-  { n: 2, t: 'Paie', d: 'Avec ton solde Cantina, Wave ou Orange Money. Pas de monnaie à chercher.' },
-  { n: 3, t: 'Récupère', d: 'Dis « J’arrive dans 5 min » : ton plat est chaud quand tu arrives.' },
-]
-
 export default function Accueil() {
   const [home, setHome] = useState({ today: [], best: [] })
   const [loaded, setLoaded] = useState(false)
+  const [cart, setCart] = useState(() => getGuestCart()?.items || {})
+  const [day, setDay] = useState(null)
 
   useEffect(() => {
     supabase.rpc('public_home').then(({ data }) => {
-      if (data) setHome({ today: data.today || [], best: data.best || [] })
+      if (data) { setHome({ today: data.today || [], best: data.best || [] }); setDay(data.day || null) }
       setLoaded(true)
     })
   }, [])
 
-  const featured = home.today.filter((d) => d.featured)
-  const today = featured.length > 0 ? featured : home.today.slice(0, 3)
+  const change = (d, delta) =>
+    setCart((c) => {
+      const q = (c[d.id]?.qty || 0) + delta
+      const next = { ...c }
+      if (q <= 0) delete next[d.id]
+      else {
+        if (d.left != null && q > d.left) return c
+        next[d.id] = { id: d.id, name: d.name, price: d.price, discount_pct: d.discount_pct || 0, qty: q }
+      }
+      setGuestCart({ day, items: next })
+      return next
+    })
+  const lines = Object.values(cart)
+  const count = lines.reduce((s, l) => s + l.qty, 0)
+  const total = lines.reduce((s, l) => s + eff(l) * l.qty, 0)
+  const Qty = ({ d }) => (
+    <span className="lp-qty">
+      {isClosed(d, day) ? <small className="muted">Fermé depuis {closesLabel(d)}</small> : null}
+      {cart[d.id] ? (
+        <>
+          <button onClick={() => change(d, -1)} aria-label="Retirer">−</button>
+          <b>{cart[d.id].qty}</b>
+        </>
+      ) : null}
+      <button onClick={() => change(d, 1)} aria-label="Ajouter" disabled={isClosed(d, day)}>+</button>
+    </span>
+  )
+
+  const today = home.today
 
   return (
     <div className="lp">
@@ -35,6 +60,14 @@ export default function Accueil() {
           <Link to="/login?mode=signup" className="lp-pill">Inscription</Link>
         </nav>
       </header>
+
+      <div className="lp-ticker" aria-hidden="true">
+        <div className="lp-ticker-in">
+          {[0, 1].map((k) => (
+            <span key={k}>Commande depuis ton téléphone, récupère sans faire la queue ✦ Compose ton plat comme tu l'aimes ✦ Paie avec ton solde, Wave ou Orange Money ✦ Des paniers anti-gaspi à prix réduit en fin de journée ✦ </span>
+          ))}
+        </div>
+      </div>
 
       <section className="lp-hero">
         <span className="lp-tag">Vatel Abidjan</span>
@@ -48,19 +81,27 @@ export default function Accueil() {
 
       <main className="lp-main">
         <section>
-          <div className="lp-head"><h2>⭐ Menu du jour</h2></div>
+          <div className="lp-head"><h2>Au menu</h2></div>
           {loaded && today.length === 0 && <p className="muted">Le menu du jour arrive bientôt.</p>}
           <div className="lp-grid">
             {today.map((d) => (
-              <Link to="/login?mode=signup" key={d.id} className="lp-card">
+              <div key={d.id} className="lp-card">
                 <span className="lp-pic"><FoodImg folder="dishes" name={d.name} category={d.category} size={96} /></span>
                 <strong>{d.name}</strong>
                 <span className="lp-price">
                   {d.discount_pct > 0 && <s className="muted">{fcfa(d.price)}</s>} {fcfa(eff(d))}
                 </span>
-                <span className="lp-order">Commander →</span>
-              </Link>
+                <Qty d={d} />
+              </div>
             ))}
+          </div>
+        </section>
+
+        <section className="lp-bsm">
+          <img src="/img/best-seller.png" alt="" onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }} />
+          <div>
+            <small>Best seller du mois</small>
+            <strong>{home.best[0]?.name || 'Notre plat star'}</strong>
           </div>
         </section>
 
@@ -69,36 +110,26 @@ export default function Accueil() {
             <div className="lp-head"><h2>🔥 Les plus commandés</h2></div>
             <div className="lp-grid">
               {home.best.map((d, i) => (
-                <Link to="/login?mode=signup" key={d.name} className="lp-card">
+                <div key={d.name} className="lp-card">
                   <span className="lp-rank">#{i + 1}</span>
                   <span className="lp-pic"><FoodImg folder="dishes" name={d.name} category={d.category} size={96} /></span>
                   <strong>{d.name}</strong>
                   <span className="lp-price">{fcfa(d.price)} · {d.qty} commandés</span>
-                </Link>
+                  {d.id && day && home.today.some((t) => t.id === d.id) && <Qty d={d} />}
+                </div>
               ))}
             </div>
           </section>
         )}
 
-        <section>
-          <div className="lp-head"><h2>Comment ça marche</h2></div>
-          <div className="lp-steps">
-            {STEPS.map((s) => (
-              <div key={s.n} className="lp-step">
-                <span className="lp-n">{s.n}</span>
-                <strong>{s.t}</strong>
-                <p>{s.d}</p>
-              </div>
-            ))}
-          </div>
-        </section>
 
-        <section className="lp-final">
-          <h2>Prêt à commander ?</h2>
-          <p>Crée ton compte en 20 secondes : un code arrive par email, pas de mot de passe à retenir.</p>
-          <Link to="/login?mode=signup" className="lp-big">Créer mon compte</Link>
-        </section>
       </main>
+      {count > 0 && (
+        <div className="cartbar">
+          <span><strong>{count}</strong> plat{count > 1 ? 's' : ''} · <strong>{fcfa(total)}</strong></span>
+          <Link to="/login?mode=signup" className="btn-coral btn-big lp-validate">Valider ma commande</Link>
+        </div>
+      )}
     </div>
   )
 }
