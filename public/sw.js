@@ -1,5 +1,5 @@
 // Service worker Cantina : l'appli s'ouvre même sans réseau (les commandes, elles, demandent internet)
-const CACHE = 'cantina-v1'
+const CACHE = 'cantina-v2'
 const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
 
 self.addEventListener('install', (e) => {
@@ -33,7 +33,21 @@ self.addEventListener('fetch', (e) => {
     return
   }
 
-  // Fichiers statiques (code, images) : cache d'abord, puis réseau
+  // Photos : réseau d'abord pour voir tout de suite une photo remplacée
+  if (url.pathname.startsWith('/img/')) {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone()
+          caches.open(CACHE).then((c) => c.put(req, copy))
+          return res
+        })
+        .catch(() => caches.match(req))
+    )
+    return
+  }
+
+  // Fichiers statiques (code) : cache d'abord, puis réseau
   e.respondWith(
     caches.match(req).then(
       (hit) =>

@@ -42,7 +42,7 @@ function DishPhoto({ dish }) {
   const local = hasDishImage(dish?.name || '')
   if (!failed && local) {
     // vraie photo détourée de la cantine en priorité
-    return <img className="is-cutout" src={`/img/dishes/${dishImage(dish.name)}.png`} alt={dish.name} onError={() => setFailed(true)} />
+    return <img className="is-cutout" src={`/img/dishes/${dishImage(dish.name)}.png`} alt={dish.name} loading="lazy" decoding="async" onError={() => setFailed(true)} />
   }
   if (failed) {
     return <FoodImg folder="dishes" name={dish.name} category={dish.category} size={116} />
@@ -106,7 +106,9 @@ export default function Accueil() {
   )
 
   const today = home.today
-  const starDish = home.best[0] || today[0]
+  // plats retirés de la carte : on ne les met plus en avant
+  const best = home.best.filter((d) => d.available !== false && !/foutou/i.test(d.name || ''))
+  const starDish = best[0] || today[0]
 
   return (
     <div className="lp">
@@ -181,18 +183,18 @@ export default function Accueil() {
           <DishPhoto dish={starDish || { name: '' }} />
           <div>
             <small>Best seller du mois</small>
-            <strong>{home.best[0]?.name || 'Notre plat star'}</strong>
+            <strong>{best[0]?.name || 'Notre plat star'}</strong>
           </div>
         </section>
 
-        {home.best.length > 0 && (
+        {best.length > 0 && (
           <section className="lp-section">
             <div className="lp-head">
               <h2>Les plus commandés</h2>
               <span className="lp-sub">Favoris du campus</span>
             </div>
             <div className="lp-grid">
-              {home.best.map((d, i) => {
+              {best.map((d, i) => {
                 const locked = isLocked(d)
                 const reason = lockLabel(d)
                 return (

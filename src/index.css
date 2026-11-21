@@ -3359,3 +3359,19 @@ button:active:not(:disabled) { transform: scale(0.97); }
   .composer-page .plates::-webkit-scrollbar { display: none; }
   .composer-page .plate-wrap { flex: 0 0 116px; scroll-snap-align: start; }
 }
+
+/* Accueil — téléphone : plus d'air et un défilement plus léger */
+@media (max-width: 619px) {
+  .lp-hero { padding: 26px 18px 30px; }
+  .lp-hero-inner { grid-template-columns: minmax(0, 1fr) 108px; gap: 16px; }
+  .lp-hero-media { width: 108px; height: 128px; }
+  .lp-hero p { margin-bottom: 18px; }
+  .lp-big { white-space: nowrap; font-size: 0.86rem; padding: 0.8em 1.15em; }
+  .lp-main { padding: 26px 18px 120px; gap: 38px; }
+  .lp-section { gap: 16px; }
+  .lp-grid { gap: 14px; }
+  .lp-card { padding: 10px 10px 13px; row-gap: 10px; border-radius: 20px; }
+  .lp-bsm { margin: 4px 0; }
+}
+.lp-card { content-visibility: auto; contain-intrinsic-size: auto 250px; }
+.lp-pic img { will-change: auto; }

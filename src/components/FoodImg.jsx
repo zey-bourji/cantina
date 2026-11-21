@@ -98,6 +98,8 @@ export default function FoodImg({ folder, name, category, size = 64 }) {
         width={fill ? undefined : size}
         height={fill ? undefined : size}
         className="food-img-asset"
+        loading="lazy"
+        decoding="async"
         style={fill ? { width: '100%', height: '100%', objectFit: 'cover' } : { objectFit: 'cover' }}
         onError={() => setFailed(true)}
       />
