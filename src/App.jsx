@@ -2,6 +2,10 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Placeholder from './pages/Placeholder'
+import ClientMenu from './pages/ClientMenu'
+import Caisse from './pages/Caisse'
+import Cuisine from './pages/Cuisine'
+import Admin from './pages/Admin'
 
 const HOME = {
   client: '/menu',
@@ -36,7 +40,7 @@ export default function App() {
         path="/menu"
         element={
           <Protected roles={['client']}>
-            <Placeholder title="Menu de la semaine" text="Écran client : menu, plateau, commande, solde." />
+            <ClientMenu />
           </Protected>
         }
       />
@@ -44,7 +48,7 @@ export default function App() {
         path="/caisse"
         element={
           <Protected roles={['caisse', 'admin']}>
-            <Placeholder title="Caisse" text="Numéro de commande et détail." />
+            <Caisse />
           </Protected>
         }
       />
@@ -52,7 +56,7 @@ export default function App() {
         path="/cuisine"
         element={
           <Protected roles={['cuisine', 'admin']}>
-            <Placeholder title="Cuisine" text="Commandes à préparer." />
+            <Cuisine />
           </Protected>
         }
       />
@@ -60,7 +64,7 @@ export default function App() {
         path="/admin"
         element={
           <Protected roles={['admin']}>
-            <Placeholder title="Administration" text="Menus, commandes du jour, statistiques." />
+            <Admin />
           </Protected>
         }
       />
