@@ -3453,3 +3453,11 @@ button:active:not(:disabled) { transform: scale(0.97); }
   .lp-hero h1 { font-size: 3.2rem; }
   .lp-hero p { font-size: 1.05rem; }
 }
+
+/* Caisse : recherche du reçu en grand, en haut */
+.receipt-search { display: grid; gap: 6px; margin: 4px 0 18px; max-width: 420px; }
+.receipt-search label { font-weight: 700; font-size: 0.95rem; }
+.receipt-search input {
+  font-size: 1.6rem; font-weight: 800; letter-spacing: 0.08em;
+  padding: 14px 16px; border-radius: 14px; font-variant-numeric: tabular-nums;
+}

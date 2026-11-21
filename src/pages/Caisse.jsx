@@ -171,7 +171,7 @@ export default function Caisse() {
 
   const list = orders
     .filter((o) => !['recuperee', 'annulee'].includes(o.status))
-    .filter((o) => !q || String(o.number).includes(q))
+    .filter((o) => !q || String(o.number) === q || String(o.number).startsWith(q))
 
   return (
     <div>
@@ -179,11 +179,17 @@ export default function Caisse() {
       <main className="container">
         {alertMsg && <div className="arrive-tag" style={{ position: 'sticky', top: 8, zIndex: 20, fontSize: '1.05rem', padding: '12px 16px' }}>🔔 {alertMsg}</div>}
         <h2>Caisse</h2>
-        <DayQuantities />
-        <ProposeDish />
-        <AntiGaspi />
-        <input placeholder="Chercher un numéro de commande" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: '100%', maxWidth: 360, marginBottom: 14 }} />
-        {list.length === 0 && <p className="muted">Aucune commande en cours.</p>}
+        <div className="receipt-search">
+          <label htmlFor="receipt-num">Numéro du reçu du client</label>
+          <input
+            id="receipt-num"
+            inputMode="numeric"
+            placeholder="Ex. 123"
+            value={q}
+            onChange={(e) => setQ(e.target.value.replace(/\D/g, ''))}
+          />
+        </div>
+        {list.length === 0 && <p className="muted">{q ? `Aucune commande avec le numéro ${q}.` : 'Aucune commande en cours.'}</p>}
         <div className="tickets">
           {list.map((o) => (
             <div key={o.id} className={`card ticket-card ${o.arriving ? 'arriving' : ''}`}>
@@ -205,6 +211,9 @@ export default function Caisse() {
             </div>
           ))}
         </div>
+        <DayQuantities />
+        <ProposeDish />
+        <AntiGaspi />
       </main>
     </div>
   )
